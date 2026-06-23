@@ -1,0 +1,122 @@
+[
+  {
+    "id": "b1",
+    "category": "bKash",
+    "question": "How can I reset my bKash PIN?",
+    "ground_truth": "Dial *247# and select 'Forgot PIN' option. Verify identity with registered mobile number and security answer."
+  },
+  {
+    "id": "b2",
+    "category": "bKash",
+    "question": "আমার bKash অ্যাকাউন্ট ব্লক হয়েছে, কী করব?",
+    "ground_truth": "bKash customer care (16272) এ কল করুন অথবা অ্যাপ থেকে অনুরোধ করুন অ্যাকাউন্ট আনব্লক করার জন্য।"
+  },
+  {
+    "id": "b3",
+    "category": "bKash",
+    "question": "How do I cash out from bKash?",
+    "ground_truth": "Go to an agent, provide your mobile number and amount, verify with PIN, agent gives cash."
+  },
+  {
+    "id": "b4",
+    "category": "bKash",
+    "question": "bKash-এ ট্রানজ্যাকশন ফেইল হয়েছে怎么办?",
+    "ground_truth": "Check transaction history. If money deducted but failed, it will be auto-refunded within 3-5 business days."
+  },
+  {
+    "id": "b5",
+    "category": "bKash",
+    "question": "How to get bKash OTP if not receiving?",
+    "ground_truth": "Ensure mobile number is correct. Wait 60 seconds for retry. Contact customer care if issue persists."
+  },
+  {
+    "id": "n1",
+    "category": "Nagad",
+    "question": "আমার নগদ PIN ভুলে গেছি",
+    "ground_truth": "*167# ডায়াল করে 'Forgot PIN' সিলেক্ট করুন, রেজিস্টার্ড মোবাইল নম্বর এবং সিকিউরিটি প্রশ্নের উত্তর দিন।"
+  },
+  {
+    "id": "n2",
+    "category": "Nagad",
+    "question": "What is Nagad daily transaction limit?",
+    "ground_truth": "Nagad user level limits apply: New users have lower limits, verified users higher. Check app for exact limits."
+  },
+  {
+    "id": "n3",
+    "category": "Nagad",
+    "question": "How to send money via Nagad?",
+    "ground_truth": "Dial *167#, select 'Send Money', enter recipient number and amount, confirm with PIN."
+  },
+  {
+    "id": "d1",
+    "category": "DBBL",
+    "question": "DBBL debit card blocked, how to unblock?",
+    "ground_truth": "Call DBBL customer care or visit a branch with NID to verify identity and request card reactivation."
+  },
+  {
+    "id": "d2",
+    "category": "DBBL",
+    "question": "How to withdraw from DBBL ATM?",
+    "ground_truth": "Insert DBBL debit card, enter PIN, select withdrawal option, enter amount, take cash and card."
+  },
+  {
+    "id": "d3",
+    "category": "DBBL",
+    "question": "How to open a DBBL bank account?",
+    "ground_truth": "Visit a DBBL branch with NID, photograph, and initial deposit. Fill account opening form."
+  },
+  {
+    "id": "b6",
+    "category": "bKash",
+    "question": "amar bKash account block hoyeche",
+    "ground_truth": "bKash support এ যোগাযোগ করুন অথবা অ্যাপের 'Help' মেনু থেকে অনুরোধ করুন অ্যাকাউন্ট আনব্লক করার জন্য।"
+  },
+  {
+    "id": "b7",
+    "category": "bKash",
+    "question": "bKash PIN reset korte hole ki kore?",
+    "ground_truth": "*247# নম্বর ডায়াল করুন, 'Forgot PIN' অপশন সিলেক্ট করুন, আপনার রেজিস্টার্ড মোবাইল নম্বর দিন।"
+  },
+  {
+    "id": "n4",
+    "category": "Nagad",
+    "question": "nagad pin reset korbo",
+    "ground_truth": "*167# ডায়াল করুন, PIN ভুলে গেছেন option নিন, আপনার সিকিউরিটি প্রশ্নের উত্তর দিন।"
+  },
+  {
+    "id": "d4",
+    "category": "DBBL",
+    "question": "DBBL card e problem",
+    "ground_truth": "DBBL brass এ যোগাযোগ করুন কার্ড আনব্লক/নতুন কার্ড ইস্যু করার জন্য।"
+  },
+  {
+    "id": "b8",
+    "category": "bKash",
+    "question": "How to check bKash balance?",
+    "ground_truth": "Dial *247#, select 'Balance Check', enter PIN."
+  },
+  {
+    "id": "n5",
+    "category": "Nagad",
+    "question": "How to check Nagad balance?",
+    "ground_truth": "Dial *167#, select balance inquiry option, enter PIN."
+  },
+  {
+    "id": "d5",
+    "category": "DBBL",
+    "question": "How to block DBBL card if lost?",
+    "ground_truth": "Call DBBL hotline immediately to block the card. Visit branch for replacement."
+  },
+  {
+    "id": "b9",
+    "category": "bKash",
+    "question": "bKash-এ ক্যাশ আউট করতে চাই",
+    "ground_truth": "সবল অاجেন্টের কাছে যান, আপনার মোবাইল নম্বর এবং এমাউন্ট দিন, PIN দিয়ে ভেরিফাই করুন, ক্যাশ নিন।"
+  },
+  {
+    "id": "n6",
+    "category": "Nagad",
+    "question": "How to change Nagad PIN?",
+    "ground_truth": "Dial *167#, select 'Change PIN', enter old PIN, then enter new PIN twice."
+  }
+]

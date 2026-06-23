@@ -36,6 +36,16 @@ backend/
 
 - `GET /health` - Health check
 
+## Evaluation
+
+The system uses a **Custom RAG Evaluation Pipeline** that measures:
+
+- **Faithfulness** — whether the generated answer is supported by the retrieved context
+- **Answer Relevancy** — whether the answer addresses the user's question
+- **Context Precision** — whether the retrieved chunks are useful for the final answer
+
+The evaluation uses lightweight RAG-inspired metrics optimized for Bengali/English banking FAQ evaluation.
+
 ## Tech Stack
 
 - FastAPI

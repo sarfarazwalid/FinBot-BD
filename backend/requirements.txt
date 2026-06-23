@@ -10,3 +10,4 @@ rank-bm25>=0.2.2
 numpy>=1.26.0
 tiktoken>=0.7.0
 requests>=2.31.0
+ragas>=0.1.0

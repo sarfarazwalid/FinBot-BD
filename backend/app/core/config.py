@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # LLM
     anthropic_api_key: str = ""
-    claude_model: str = "claude-3-5-sonnet-20240620"
+    claude_model: str = "claude-sonnet-4-20250514"
 
     # Embeddings
     embedding_model: str = "intfloat/multilingual-e5-large"
