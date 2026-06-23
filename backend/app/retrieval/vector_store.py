@@ -13,7 +13,7 @@ overridden via environment variables (see ``.env.example``).
 from __future__ import annotations
 
 import logging
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -149,3 +149,55 @@ def _get_pinecone_index():
         )
 
     return index
+
+
+# ---------------------------------------------------------------------------
+# Semantic search (Pinecone query)
+# ---------------------------------------------------------------------------
+
+def semantic_search(
+    query: str,
+    top_k: int = 5,
+) -> List[Dict[str, Any]]:
+    """Embed *query* and search the Pinecone index for the top-k neighbours.
+
+    Args:
+        query: Free-text query string.
+        top_k: Number of results to return.
+
+    Returns:
+        A list of dicts with keys ``id``, ``text``, ``source``,
+        ``language``, ``score``.  ``score`` is the cosine similarity
+        reported by Pinecone.
+
+    Raises:
+        RuntimeError: If the Pinecone API key is missing or the index
+            dimension does not match the embedding dimension.
+    """
+    index = _get_pinecone_index()
+
+    # Embed the query (1 x 1024).
+    vectors = EmbeddingModel.embed(query)
+
+    # Query Pinecone.
+    response = index.query(
+        vector=vectors[0].tolist(),
+        top_k=top_k,
+        include_metadata=True,
+    )
+
+    results: List[Dict[str, Any]] = []
+    for match in response.get("matches", []):
+        meta = match.get("metadata", {})
+        results.append(
+            {
+                "id": match.get("id", ""),
+                "text": meta.get("text", ""),
+                "source": meta.get("source", ""),
+                "language": meta.get("language", ""),
+                "score": match.get("score", 0.0),
+            }
+        )
+
+    logger.debug("Semantic search returned %d results for %r", len(results), query)
+    return results
