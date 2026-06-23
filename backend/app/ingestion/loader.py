@@ -10,11 +10,46 @@ logger = logging.getLogger(__name__)
 
 SUPPORTED_EXTENSIONS = {".txt", ".md", ".json"}
 
+# Files to exclude regardless of extension (matched by stem).
+# Prevents README.md, README.txt, README.rst, etc. from being ingested.
+EXCLUDED_FILES = frozenset({
+    "README",
+    "README_TEMPLATE",
+})
+
+# Directories to skip entirely (parent directory name check).
+EXCLUDED_DIRS = frozenset({
+    "__pycache__",
+    ".git",
+    ".svn",
+    ".hg",
+    "__MACOSX",
+})
+
 
 def _is_excluded(file_path: Path, exclude_patterns: List[str]) -> bool:
     name = file_path.name
     stem = file_path.stem
     suffix = file_path.suffix.lower()
+
+    # Exclude hidden files (starting with ".")
+    if name.startswith("."):
+        return True
+
+    # Exclude temporary editor files (starting with "~")
+    if name.startswith("~"):
+        return True
+
+    # Exclude files inside excluded directories
+    for part in file_path.parts:
+        if part in EXCLUDED_DIRS:
+            return True
+
+    # Exclude by stem (e.g. "README" matches README.md, README.txt, etc.)
+    if stem in EXCLUDED_FILES:
+        return True
+
+    # Exclude by explicit user-provided patterns (from config)
     for pattern in exclude_patterns:
         if pattern.startswith("*"):
             if suffix == pattern[1:].lower():
@@ -22,10 +57,7 @@ def _is_excluded(file_path: Path, exclude_patterns: List[str]) -> bool:
         else:
             if name == pattern or stem == pattern:
                 return True
-    if name.startswith("."):
-        return True
-    if name.startswith("~"):
-        return True
+
     return False
 
 

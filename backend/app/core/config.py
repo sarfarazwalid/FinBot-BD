@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     claude_model: str = "claude-3-5-sonnet-20240620"
 
     # Embeddings
-    embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    embedding_dimension: int = 384
+    embedding_model: str = "intfloat/multilingual-e5-large"
+    embedding_dimension: int = 1024
 
     # Pinecone
     pinecone_api_key: str = ""
@@ -38,8 +38,6 @@ class Settings(BaseSettings):
     # Ingestion
     ingestion_exclude_patterns: list[str] = Field(
         default_factory=lambda: [
-            "README.md",
-            "README",
             ".gitignore",
             ".DS_Store",
             "Thumbs.db",
@@ -48,6 +46,5 @@ class Settings(BaseSettings):
             "*.tsv",
             "*.log",
             "*.tmp",
-            ".*",
         ]
     )

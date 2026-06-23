@@ -1,0 +1,1 @@
+"""Embedding generation and Pinecone indexing for FinBot BD."""

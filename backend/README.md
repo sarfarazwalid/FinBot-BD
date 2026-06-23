@@ -40,9 +40,20 @@ backend/
 
 - FastAPI
 - Python 3.12
-- Pinecone
+- Pinecone (Dimension: 1024, Metric: cosine)
 - Anthropic Claude API
-- sentence-transformers
+- sentence-transformers (`intfloat/multilingual-e5-large`)
 - rank-bm25
 - Pydantic Settings
 - python-dotenv
+
+## Embeddings
+
+The system uses `intfloat/multilingual-e5-large` as the embedding model. This model:
+
+- Generates 1024-dimensional vectors, optimized for multilingual semantic retrieval
+- Supports Bengali, English, and Banglish (Romanized Bengali) — critical for the FinBot BD domain
+- Handles banking-specific terminology across bKash, DBBL, and Nagad queries
+- Provides improved retrieval accuracy over the smaller e5-base variant (384 → 1024 dimensions)
+
+> **Interview talking point:** *multilingual-e5-large provides improved multilingual semantic retrieval for Bengali, English, and Banglish banking queries. The 1024-dimension vectors capture richer semantic relationships, which is essential when users ask the same question in multiple scripts (e.g., "PIN ভুলে গেছি", "amar pin vule gechi", "I forgot my PIN").*

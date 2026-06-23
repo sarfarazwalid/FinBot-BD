@@ -10,7 +10,7 @@ from app.core.config import Settings
 from .loader import load_documents
 from .cleaner import clean_text
 from .chunker import create_chunks
-from .validator import validate_chunks
+from .validator import validate_chunks, print_validation_report
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +73,7 @@ def run_pipeline(raw_dir: str | Path = RAW_DIR, output_path: str | Path = PROCES
     logger.info("Saved chunks to %s", output_path)
 
     report = validate_chunks(output_path)
+    print_validation_report(report)
     logger.info("Validation report: %s", report)
 
 
