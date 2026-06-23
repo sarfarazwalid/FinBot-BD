@@ -1,0 +1,84 @@
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+from typing import List
+
+from .schemas import Document
+
+logger = logging.getLogger(__name__)
+
+SUPPORTED_EXTENSIONS = {".txt", ".md", ".json"}
+
+
+def _is_excluded(file_path: Path, exclude_patterns: List[str]) -> bool:
+    name = file_path.name
+    stem = file_path.stem
+    suffix = file_path.suffix.lower()
+    for pattern in exclude_patterns:
+        if pattern.startswith("*"):
+            if suffix == pattern[1:].lower():
+                return True
+        else:
+            if name == pattern or stem == pattern:
+                return True
+    if name.startswith("."):
+        return True
+    if name.startswith("~"):
+        return True
+    return False
+
+
+def load_documents(
+    directory_path: str | Path,
+    exclude_patterns: List[str] | None = None,
+    supported_extensions: set[str] | None = None,
+) -> List[Document]:
+    """Load all supported documents from a directory recursively.
+
+    Args:
+        directory_path: Path to the directory containing raw documents.
+        exclude_patterns: Filename or extension patterns to skip.
+        supported_extensions: Allowed file extensions.
+
+    Returns:
+        List of Document objects with text, source, and file_type.
+
+    Raises:
+        No exceptions are raised; corrupted files are skipped with a warning.
+    """
+    docs: List[Document] = []
+    root = Path(directory_path)
+    if exclude_patterns is None:
+        exclude_patterns = []
+    if supported_extensions is None:
+        supported_extensions = SUPPORTED_EXTENSIONS
+
+    if not root.exists() or not root.is_dir():
+        logger.warning("Directory not found or not a directory: %s", directory_path)
+        return docs
+
+    for file_path in sorted(root.rglob("*")):
+        if not file_path.is_file():
+            continue
+        if _is_excluded(file_path, exclude_patterns):
+            logger.debug("Excluding file: %s", file_path)
+            continue
+        if file_path.suffix.lower() not in supported_extensions:
+            continue
+        try:
+            text = file_path.read_text(encoding="utf-8")
+            if not text.strip():
+                logger.warning("Skipping empty file: %s", file_path)
+                continue
+            docs.append(
+                Document(
+                    text=text,
+                    source=file_path.name,
+                    file_type=file_path.suffix.lower(),
+                )
+            )
+        except Exception as exc:
+            logger.error("Failed to read file %s: %s", file_path, exc)
+
+    return docs
