@@ -1,56 +1,65 @@
+"""Context sanitization for retrieved chunks.
+
+Strips metadata labels (Question:, Answer:, Category:, Language:, ==== separators)
+from chunk text so that only the clean answer content is sent to the LLM.
+"""
+
 from __future__ import annotations
 
-import html
-import logging
 import re
+from typing import Any, Dict, List
 
-logger = logging.getLogger(__name__)
+_METADATA_LINE = re.compile(
+    r"^(Question:|Answer:|Category:|Language:|={2,})",
+    re.MULTILINE,
+)
+
+_SEPARATOR_LINE = re.compile(r"^-{3,}|={3,}", re.MULTILINE)
+
+_ANSWER_LINE = re.compile(r"^Answer:\s*", re.MULTILINE)
+
+_LABEL_AND_VALUE = re.compile(
+    r"(?:Question|Category|Language):[^\n]*\n?", re.MULTILINE
+)
 
 
-def clean_text(text: str) -> str:
-    """Clean raw FAQ text while preserving structure and Bengali characters.
+def sanitize_chunk_text(text: str) -> str:
+    """Extract only the answer content from a FAQ chunk.
 
-    Steps:
-    - Normalize Unicode whitespace.
-    - Remove excessive spaces.
-    - Remove repeated newlines.
-    - Strip unwanted symbols while preserving Bengali and common punctuation.
-    - Unescape HTML entities.
-    - Preserve FAQ separator and labels.
-
-    Args:
-        text: Raw input text.
-
-    Returns:
-        Cleaned text string.
+    If the chunk contains an ``Answer:`` line, returns everything after
+    ``Answer:`` up to the next label or separator.  Otherwise falls back
+    to stripping all metadata lines (``Question:``, ``Category:``,
+    ``Language:``, ``====``) and returning what remains.
     """
-    if not isinstance(text, str):
-        text = str(text)
+    # Strategy 1: extract text after Answer: line
+    answer_match = _ANSWER_LINE.split(text, maxsplit=1)
+    if len(answer_match) == 2:
+        after_answer = answer_match[1]
+        # Cut off at the next label or separator
+        cut = re.split(r"\n(?:Question|Category|Language):|=+", after_answer, maxsplit=1)[0]
+        cleaned = cut.strip()
+        if cleaned:
+            return cleaned
 
-    text = html.unescape(text)
+    # Strategy 2: strip all metadata labels
+    cleaned = _LABEL_AND_VALUE.sub("", text)
+    cleaned = _SEPARATOR_LINE.sub("", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    return cleaned
 
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
 
-    text = re.sub(r"[ \t]+", " ", text)
+def sanitize_context(
+    chunks: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Return a new list of chunks with sanitized ``text`` fields.
 
-    text = re.sub(r"\n{3,}", "\n\n", text)
-
-    text = re.sub(r"^[ \t]+", "", text, flags=re.MULTILINE)
-
-    text = re.sub(r"[ \t]+$", "", text, flags=re.MULTILINE)
-
-    allowed_symbols = (
-        r"!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~"
-    )
-    text = re.sub(
-        rf"[^\w\s\n{re.escape(allowed_symbols)}\u0980-\u09FF]",
-        "",
-        text,
-        flags=re.UNICODE,
-    )
-
-    text = re.sub(r"<[^>]+>", "", text)
-
-    text = text.strip()
-
-    return text
+    Each chunk dict is copied and its ``text`` key is replaced with the
+    cleaned version.  Other fields (``source``, ``score``, …) are left
+    untouched.
+    """
+    sanitized: List[Dict[str, Any]] = []
+    for chunk in chunks:
+        c = dict(chunk)
+        c["text"] = sanitize_chunk_text(c.get("text", ""))
+        sanitized.append(c)
+    return sanitized

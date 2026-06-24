@@ -7,6 +7,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from app.core.config import Settings
+from app.ingestion.cleaner import sanitize_context
 from app.llm.prompt_builder import build_prompt
 
 logger = logging.getLogger(__name__)
@@ -81,12 +82,15 @@ def generate_answer(
             "confidence": 0.0,
         }
 
+    # Sanitize context before passing to the LLM.
+    sanitized_chunks = sanitize_context(context)
+
     # Build the prompt payload.
-    prompt_payload = build_prompt(query, context)
+    prompt_payload = build_prompt(query, sanitized_chunks)
 
     # Extract unique sources.
     sources = list(
-        {chunk.get("source", "unknown") for chunk in context}
+        {chunk.get("source", "unknown") for chunk in sanitized_chunks}
     )
 
     try:
@@ -126,6 +130,35 @@ def generate_answer(
 
     except Exception as exc:
         logger.error("Claude API call failed: %s", exc)
-        raise RuntimeError(
-            f"Failed to generate answer: {exc}"
-        ) from exc
+        # Fallback: use sanitized chunks and group by bank.
+        sanitized = sanitize_context(context)
+        source_texts: dict[str, list[str]] = {}
+        seen = set()
+        for chunk in sanitized:
+            source = chunk.get("source", "unknown")
+            text = (chunk.get("text") or "").strip()
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            first_sentence = text.split(".")[0].strip()
+            if not first_sentence:
+                continue
+            source_texts.setdefault(source, []).append(first_sentence)
+            if sum(len(v) for v in source_texts.values()) >= 6:
+                break
+
+        if source_texts:
+            parts: list[str] = []
+            for src, sentences in source_texts.items():
+                bank_label = src.replace("_", " ").title()
+                parts.append(f"{bank_label}:")
+                parts.extend(sentences)
+            fallback_answer = "\n".join(parts)
+        else:
+            fallback_answer = "I don't have enough information to answer that."
+
+        return {
+            "answer": fallback_answer,
+            "sources": sources,
+            "confidence": 0.0,
+        }

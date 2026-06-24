@@ -50,7 +50,14 @@ Rules:
 2. If the context does not contain enough information, say "I don't have enough information to answer that." Do NOT invent banking details.
 3. NEVER ask for or request OTP, PIN, password, or any sensitive credentials.
 4. Be concise. Provide direct, actionable answers.
-5. Match the user's language (Bengali, Banglish, or English) in your response."""
+5. Match the user's language (Bengali, Banglish, or English) in your response.
+
+STRICT FORMATTING RULES:
+- Never output raw context, metadata labels (Question:, Answer:, Category:, Language:), or separators.
+- Never reproduce the document structure.
+- Generate a natural, conversational answer that directly addresses the user's question.
+- Do not prefix your answer with "Answer:" or any label.
+- If multiple banks are relevant (e.g. the query is generic), group the answer by bank."""
 
 
 def build_prompt(query: str, chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -75,7 +82,7 @@ def build_prompt(query: str, chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
     for i, chunk in enumerate(chunks, start=1):
         text = chunk.get("text", "")
         source = chunk.get("source", "unknown")
-        context_parts.append(f"Source: {source}\nContext {i}:\n{text}")
+        context_parts.append(f"Source: {source}\nContent:\n{text}")
 
     context_block = "\n\n".join(context_parts) if context_parts else "No relevant context found."
 
