@@ -75,6 +75,7 @@ def _ensure_index() -> None:
     """Load corpus and build BM25 index on first call."""
     global _corpus, _tokenized_corpus, _bm25
     if _bm25 is not None:
+        logger.info("[CACHE] BM25 index reused")
         return
 
     logger.info("Loading BM25 corpus from %s", CHUNKS_PATH)

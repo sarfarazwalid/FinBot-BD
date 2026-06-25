@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -58,9 +57,6 @@ def run_evaluation() -> None:
     )
 
     settings = Settings()
-    if not settings.anthropic_api_key:
-        logger.error("ANTHROPIC_API_KEY is not set. Evaluation requires Claude.")
-        sys.exit(1)
 
     questions = load_questions()
     logger.info("Starting FinBot BD RAG Evaluation")

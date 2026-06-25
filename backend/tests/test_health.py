@@ -29,4 +29,4 @@ class TestHealth:
     def test_health_structure(self: TestHealth) -> None:
         response = client.get("/health")
         data = response.json()
-        assert set(data.keys()) == {"status", "service", "version"}
+        assert set(data.keys()) == {"status", "service", "version", "provider", "model", "fallback_mode"}

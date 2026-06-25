@@ -25,13 +25,13 @@ This starts **both** services simultaneously:
 | `npm run frontend` | Start Next.js only (`next dev -p 3000`) |
 | `npm run install:all` | Install root + frontend dependencies |
 | `npm run health` | Quick check — `curl http://localhost:8000/health` |
-| `npm run test` | Run all 82 backend tests |
+| `npm run test` | Run all backend tests |
 
 ## Getting started
 
 1. Clone the repo.
 2. Copy `backend/.env.example` → `backend/.env` and add your API keys:
-   - `ANTHROPIC_API_KEY` — from [console.anthropic.com](https://console.anthropic.com)
+   - `OPENROUTER_API_KEY` — from [openrouter.ai](https://openrouter.ai)
    - `PINECONE_API_KEY` — from [pinecone.io](https://pinecone.io)
 3. Install Python dependencies:
    ```bash
@@ -49,6 +49,86 @@ This starts **both** services simultaneously:
    ```
 6. Open http://localhost:3000
 
+## Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENROUTER_API_KEY` | *(empty)* | OpenRouter API key |
+| `OPENROUTER_MODEL` | `qwen/qwen3-8b:free` | Model identifier on OpenRouter |
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenRouter base URL |
+| `PINECONE_API_KEY` | *(empty)* | Pinecone API key |
+| `PINECONE_INDEX_NAME` | `finbot-bd` | Pinecone index name |
+| `EMBEDDING_MODEL` | `intfloat/multilingual-e5-large` | SentenceTransformer model |
+| `TOP_K` | `5` | Number of retrieval results |
+| `HF_TOKEN` | *(empty)* | Hugging Face access token (see below) |
+
+## Hugging Face Authentication
+
+The embedding model (`intfloat/multilingual-e5-large`) is downloaded from
+Hugging Face.  Without authentication you will see this warning:
+
+```
+Warning: You are sending unauthenticated requests to the HF Hub.
+```
+
+To silence the warning and get higher rate limits:
+
+1.  Go to https://huggingface.co/settings/tokens and create a **read** token.
+2.  Add it to `backend/.env`:
+
+    ```
+    HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxx
+    ```
+
+3.  Restart the backend.
+
+On startup you should see:
+
+```
+HF Token Present: YES
+[CACHE] HuggingFace authenticated: YES
+```
+
+The token is **never** logged or exposed in source code.  It is only read from
+`backend/.env` at runtime and forwarded to the Hugging Face SDK via
+environment variables.
+
+## Verify OpenRouter connectivity
+
+```bash
+cd backend
+python -c "
+import os
+from openai import OpenAI
+client = OpenAI(
+    api_key=os.environ['OPENROUTER_API_KEY'],
+    base_url=os.environ.get('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1') + '/chat/completions'
+)
+resp = client.chat.completions.create(
+    model=os.environ.get('OPENROUTER_MODEL', 'qwen/qwen3-8b:free'),
+    messages=[{'role': 'user', 'content': 'Say hello from OpenRouter!'}]
+)
+print('OpenRouter says:', resp.choices[0].message.content)
+"
+```
+
+## Health check
+
+```bash
+curl http://localhost:8000/health
+```
+
+Returns:
+```json
+{
+  "status": "ok",
+  "service": "FinBot BD",
+  "version": "1.0.0",
+  "provider": "openrouter",
+  "model": "qwen/qwen3-8b:free"
+}
+```
+
 ## Project structure
 
 ```
@@ -59,10 +139,10 @@ This starts **both** services simultaneously:
 │   │   ├── core/          # Config + version
 │   │   ├── ingestion/     # Loader, chunker, cleaner, pipeline
 │   │   ├── retrieval/     # BM25, vector store, hybrid search
-│   │   ├── llm/           # Prompt builder + Claude generator
+│   │   ├── llm/           # Prompt builder + OpenRouter generator
 │   │   └── evaluation/    # Custom RAG metrics
 │   ├── data/raw/          # bKash/Nagad/DBBL FAQ text files
-│   ├── tests/             # 82 passing tests
+│   ├── tests/             # Passing tests
 │   └── requirements.txt   # Python dependencies
 ├── frontend/
 │   ├── src/app/           # Next.js App Router

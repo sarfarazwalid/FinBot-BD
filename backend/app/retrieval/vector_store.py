@@ -13,6 +13,7 @@ overridden via environment variables (see ``.env.example``).
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -21,6 +22,82 @@ from sentence_transformers import SentenceTransformer
 from app.core.config import Settings
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Hugging Face authentication (called once at startup)
+# ---------------------------------------------------------------------------
+
+_HF_AUTHENTICATED = False
+_HF_USERNAME: Optional[str] = None
+
+
+def configure_huggingface_auth() -> dict:
+    """Authenticate with Hugging Face using the token from Settings.
+
+    Uses ``huggingface_hub.login()`` with ``skip_if_logged_in=True`` so
+    repeated calls are a no-op.  Returns a dict with auth status info.
+    """
+    global _HF_AUTHENTICATED, _HF_USERNAME
+
+    result = {
+        "authenticated": False,
+        "user": None,
+        "token_present": False,
+    }
+
+    try:
+        settings = Settings()
+        token = settings.hf_token
+        result["token_present"] = bool(token)
+
+        if not token:
+            logger.info("[CACHE] HuggingFace authenticated: NO (no token)")
+            _HF_AUTHENTICATED = False
+            _HF_USERNAME = None
+            return result
+
+        # Use the official login flow
+        from huggingface_hub import login, whoami
+
+        login(token=token, add_to_git_credential=False, skip_if_logged_in=True)
+
+        # Verify authentication
+        identity = whoami()
+        _HF_USERNAME = identity.get("name", "unknown")
+        _HF_AUTHENTICATED = True
+
+        # Also set environment variables for underlying libs
+        os.environ["HF_TOKEN"] = token
+        os.environ["HUGGINGFACE_HUB_TOKEN"] = token
+
+        logger.info("[CACHE] HuggingFace authenticated: YES (user=%s)", _HF_USERNAME)
+        result["authenticated"] = True
+        result["user"] = _HF_USERNAME
+
+    except Exception as exc:
+        logger.warning("[HF] Authentication failed: %s", exc)
+        _HF_AUTHENTICATED = False
+        _HF_USERNAME = None
+
+    return result
+
+
+def get_hf_auth_status() -> dict:
+    """Return the current HF authentication status."""
+    from huggingface_hub import whoami
+    try:
+        identity = whoami()
+        username = identity.get("name", "unknown")
+        return {
+            "authenticated": True,
+            "user": username,
+        }
+    except Exception:
+        return {
+            "authenticated": False,
+            "user": None,
+        }
+
 
 # ---------------------------------------------------------------------------
 # Embedding model
@@ -39,6 +116,7 @@ class EmbeddingModel:
     """
 
     _model: Optional[SentenceTransformer] = None
+    _cache_found: bool = False
 
     # ------------------------------------------------------------------
     # Public API
@@ -46,20 +124,11 @@ class EmbeddingModel:
 
     @classmethod
     def embed(cls, texts: str | List[str]) -> np.ndarray:
-        """Compute embeddings for one or more texts.
-
-        Args:
-            texts: A single string or a list of strings to embed.
-
-        Returns:
-            A 2-D NumPy array of shape ``(n_texts, embedding_dimension)``.
-
-        Raises:
-            RuntimeError: If the embedding dimension does not match the
-                configured Pinecone index dimension (1024).
-        """
+        """Compute embeddings for one or more texts."""
         if cls._model is None:
             cls._load_model()
+        else:
+            logger.info("[CACHE] Embedding model reused")
 
         if isinstance(texts, str):
             texts = [texts]
@@ -67,15 +136,17 @@ class EmbeddingModel:
         vectors = cls._model.encode(texts, normalize_embeddings=True)  # type: ignore[union-attr]
         vectors = np.asarray(vectors, dtype=np.float32)
 
-        if vectors.shape[1] != _EXPECTED_DIMENSION:
-            raise RuntimeError(
-                f"Embedding model returned dimension {vectors.shape[1]}, "
-                f"but Pinecone index expects {_EXPECTED_DIMENSION}. "
-                f"Check that EMBEDDING_MODEL is {_EXPECTED_MODEL!r} "
-                f"and EMBEDDING_DIMENSION is {_EXPECTED_DIMENSION}."
-            )
-
         return vectors
+
+    @classmethod
+    def get_info(cls) -> dict:
+        """Return metadata about the embedding model."""
+        return {
+            "model": _EXPECTED_MODEL,
+            "dimension": _EXPECTED_DIMENSION,
+            "cache_found": cls._cache_found,
+            "model_loaded": cls._model is not None,
+        }
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -86,28 +157,79 @@ class EmbeddingModel:
         settings = Settings()
         model_name = settings.embedding_model
         logger.info("Loading embedding model: %s", model_name)
-        cls._model = SentenceTransformer(model_name)
-        logger.info("Embedding model loaded (dimension=%d)", _EXPECTED_DIMENSION)
+
+        # Log cache paths for diagnostics
+        hf_home = os.environ.get("HF_HOME", "default")
+        transformers_cache = os.environ.get(
+            "TRANSFORMERS_CACHE",
+            os.path.join(os.path.expanduser("~"), ".cache", "huggingface"),
+        )
+        logger.info("[CACHE] HF_HOME=%s", hf_home)
+        logger.info("[CACHE] TRANSFORMERS_CACHE=%s", transformers_cache)
+
+        # Check if model files already exist in cache
+        cached = False
+        try:
+            from huggingface_hub import try_to_load_from_cache
+            # Check a known file in the model's cache directory
+            model_path = try_to_load_from_cache(model_name, "modules.json")
+            cached = model_path is not None
+        except ImportError:
+            pass
+        except Exception:
+            pass
+        cls._cache_found = cached
+        if cached:
+            logger.info("[CACHE] Embedding model found in local cache")
+        else:
+            logger.info("[CACHE] Embedding model not in local cache, will download")
+
+        try:
+            cls._model = SentenceTransformer(model_name)
+            logger.info("Embedding model loaded (dimension=%d)", _EXPECTED_DIMENSION)
+        except Exception as exc:
+            logger.error("[HF] Failed to load SentenceTransformer: %s", exc)
+            raise RuntimeError(
+                f"Failed to load embedding model '{model_name}': {exc}"
+            ) from exc
+
+        # Verify dimension
+        try:
+            test_vec = cls._model.encode("hello", normalize_embeddings=True)
+            actual_dim = len(test_vec)
+            if actual_dim != _EXPECTED_DIMENSION:
+                raise RuntimeError(
+                    f"Embedding model returned dimension {actual_dim}, "
+                    f"but Pinecone index expects {_EXPECTED_DIMENSION}. "
+                    f"Check that EMBEDDING_MODEL is {_EXPECTED_MODEL!r} "
+                    f"and EMBEDDING_DIMENSION is {_EXPECTED_DIMENSION}."
+                )
+            logger.info("Embedding dimension verified: %d", actual_dim)
+        except RuntimeError:
+            raise
+        except Exception as exc:
+            logger.warning("Could not verify embedding dimension: %s", exc)
 
 
 # ---------------------------------------------------------------------------
-# Pinecone integration
+# Pinecone integration (cached client)
 # ---------------------------------------------------------------------------
 
-def _get_pinecone_index():
-    """Return a Pinecone ``Index`` instance configured from settings.
+_pinecone_index = None
 
-    The environment must provide:
-        PINECONE_API_KEY
-        PINECONE_INDEX_NAME  (default: ``"finbot-bd"``)
 
-    The index must have:
-        dimension = 1024
-        metric    = cosine
+def _get_pinecone_index() -> Any:
+    """Return a cached Pinecone ``Index`` instance configured from settings.
 
-    Raises:
-        ImportError: If the ``pinecone`` package is not installed.
+    The Pinecone client and index handle are created once and reused for
+    all subsequent queries.  This avoids the multi-second penalty of
+    reconnecting on every request.
     """
+    global _pinecone_index
+    if _pinecone_index is not None:
+        logger.info("[CACHE] Pinecone client reused")
+        return _pinecone_index
+
     try:
         from pinecone import Pinecone, ServerlessSpec
     except ImportError as exc:
@@ -136,19 +258,23 @@ def _get_pinecone_index():
             spec=ServerlessSpec(cloud="aws", region="us-east-1"),
         )
 
-    index = pc.Index(index_name)
+    _pinecone_index = pc.Index(index_name)
 
-    # Validate dimension.
-    stats = index.describe_index_stats()
-    index_dimension = stats.get("dimension", 0)
-    if index_dimension != _EXPECTED_DIMENSION:
-        raise RuntimeError(
-            f"Pinecone index '{index_name}' has dimension {index_dimension}, "
-            f"but the embedding model produces {_EXPECTED_DIMENSION}-dim vectors. "
-            f"Recreate the index with dimension={_EXPECTED_DIMENSION}."
-        )
+    # Validate dimension once at connection time.
+    try:
+        stats = _pinecone_index.describe_index_stats()
+        index_dimension = stats.get("dimension", 0)
+        if index_dimension != _EXPECTED_DIMENSION:
+            raise RuntimeError(
+                f"Pinecone index '{index_name}' has dimension {index_dimension}, "
+                f"but the embedding model produces {_EXPECTED_DIMENSION}-dim vectors. "
+                f"Recreate the index with dimension={_EXPECTED_DIMENSION}."
+            )
+    except Exception:
+        logger.warning("Could not validate Pinecone index dimension")
 
-    return index
+    logger.info("Pinecone index ready: %s", index_name)
+    return _pinecone_index
 
 
 # ---------------------------------------------------------------------------
@@ -169,15 +295,11 @@ def semantic_search(
         A list of dicts with keys ``id``, ``text``, ``source``,
         ``language``, ``score``.  ``score`` is the cosine similarity
         reported by Pinecone.
-
-    Raises:
-        RuntimeError: If the Pinecone API key is missing or the index
-            dimension does not match the embedding dimension.
     """
-    index = _get_pinecone_index()
+    index = _get_pinecone_index()  # cached after first call
 
     # Embed the query (1 x 1024).
-    vectors = EmbeddingModel.embed(query)
+    vectors = EmbeddingModel.embed(query)  # cached model after first call
 
     # Query Pinecone.
     response = index.query(

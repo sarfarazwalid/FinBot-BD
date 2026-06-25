@@ -11,15 +11,17 @@ class Settings(BaseSettings):
 
     # Application
     app_name: str = "FinBot BD"
-    app_version: str = "0.1.0"
+    app_version: str = "1.0.0"
     debug: bool = False
 
     # API
     api_prefix: str = "/api/v1"
 
-    # LLM
-    anthropic_api_key: str = ""
-    claude_model: str = "claude-sonnet-4-20250514"
+    # LLM (OpenRouter)
+    llm_provider: str = "openrouter"
+    openrouter_api_key: str = "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"
+    openrouter_model: str = "qwen/qwen3-8b:free"
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
 
     # Embeddings
     embedding_model: str = "intfloat/multilingual-e5-large"
@@ -34,6 +36,9 @@ class Settings(BaseSettings):
     top_k: int = 5
     bm25_weight: float = 0.3
     semantic_weight: float = 0.7
+
+    # Hugging Face
+    hf_token: str = ""
 
     # Ingestion
     ingestion_exclude_patterns: list[str] = Field(
