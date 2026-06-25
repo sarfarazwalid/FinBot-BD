@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # LLM (OpenRouter)
     llm_provider: str = "openrouter"
-    openrouter_api_key: str = "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"
+    openrouter_api_key: str = ""
     openrouter_model: str = "qwen/qwen3-8b:free"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
 

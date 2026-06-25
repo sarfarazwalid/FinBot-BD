@@ -1,43 +1,175 @@
+# =====================================================
+# FinBot BD - Production .gitignore
+# =====================================================
+
+##############################
+# Environment / Secrets
+##############################
+
+# Root environment files
+.env
+.env.*
+!.env.example
+
+# Backend environment files
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Frontend environment files
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# API Keys / Certificates
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+credentials/
+secrets/
+
+##############################
 # Python
+##############################
+
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# Virtual environments
 env/
 venv/
 .venv/
-pip-log.txt
-pip-delete-this-directory.txt
 
+# Packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Type checking
+.mypy_cache/
+.pyre/
+.ruff_cache/
+
+# Notebook
+.ipynb_checkpoints/
+
+##############################
+# Node.js / React / Next.js
+##############################
+
+node_modules/
+
+.next/
+out/
+dist/
+build/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+##############################
 # IDEs
+##############################
+
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Environment variables
-.env
-.env.local
-.env.*.local
+##############################
+# Logs
+##############################
 
+logs/
+*.log
+
+##############################
+# Databases
+##############################
+
+*.db
+*.sqlite
+*.sqlite3
+
+##############################
+# Models
+##############################
+
+models/
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.pkl
+*.joblib
+
+##############################
 # Data
+##############################
+
 data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 
-# Models
-models/
-*.bin
-*.pt
-*.pkl
+##############################
+# Hugging Face Cache
+##############################
 
-# Logs
-*.log
-logs/
+.cache/
+.huggingface/
+.hf/
 
-# OS
+##############################
+# Operating System
+##############################
+
 .DS_Store
 Thumbs.db
+Desktop.ini
+
+##############################
+# Temporary Files
+##############################
+
+tmp/
+temp/
+*.tmp
+
+##############################
+# Git
+##############################
+
+*.orig
+*.rej
+
+##############################
+# Coverage
+##############################
+
+coverage/
+coverage.xml
+
+##############################
+# Miscellaneous
+##############################
+
+.envrc
+.direnv/
