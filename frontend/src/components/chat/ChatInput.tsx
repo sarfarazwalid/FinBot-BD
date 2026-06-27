@@ -1,13 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  Loader2,
-  Mic,
-  Paperclip,
-  ArrowUp,
-} from "lucide-react";
+import { ArrowUp, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
@@ -17,18 +12,16 @@ interface ChatInputProps {
 
 export function ChatInput({ onSend, loading }: ChatInputProps) {
   const [input, setInput] = useState("");
-  const [focused, setFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const el = textareaRef.current;
-    if (el) {
-      el.style.height = "auto";
-      el.style.height = Math.min(el.scrollHeight, 160) + "px";
-    }
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [input]);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = () => {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
     onSend(trimmed);
@@ -36,7 +29,7 @@ export function ChatInput({ onSend, loading }: ChatInputProps) {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [input, loading, onSend]);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -48,69 +41,44 @@ export function ChatInput({ onSend, loading }: ChatInputProps) {
   const canSend = input.trim().length > 0 && !loading;
 
   return (
-    <div className="relative">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmit();
-        }}
+    <div className="relative w-full">
+      <div
         className={cn(
-          "relative flex items-end gap-2 p-2 rounded-lg transition-all duration-200",
-          "bg-card/80 backdrop-blur-sm border",
-          focused ? "border-accent/40" : "border-border hover:border-accent/20"
+          "relative flex items-center gap-3 rounded-lg border transition-all duration-200",
+          "bg-card/80 backdrop-blur-sm",
+          canSend
+            ? "border-accent/40 shadow-[0_0_20px_-5px_rgba(184,115,51,0.2)]"
+            : "border-border"
         )}
       >
-        {/* Left controls */}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            className="h-8 w-8 rounded-md flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-white/[0.03] transition-all duration-200"
-            title="Attach file"
-          >
-            <Paperclip className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="h-8 w-8 rounded-md flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-white/[0.03] transition-all duration-200"
-            title="Voice input"
-          >
-            <Mic className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Input */}
-        <div className="flex-1 min-w-0">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder="Ask your question"
-            rows={1}
-            disabled={loading}
-            className={cn(
-              "w-full bg-transparent border-0 outline-none resize-none py-2 px-0",
-              "text-sm text-text placeholder-text-muted",
-              "focus:ring-0 focus:outline-none",
-              "disabled:opacity-30 disabled:cursor-not-allowed",
-              "scrollbar-hide"
-            )}
-            style={{ minHeight: "20px", maxHeight: "160px" }}
-          />
-        </div>
-
-        {/* Send button */}
-        <motion.button
-          whileHover={canSend ? { scale: 1.02 } : undefined}
-          whileTap={canSend ? { scale: 0.98 } : undefined}
-          type="submit"
-          disabled={!canSend}
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask about bKash, Nagad, DBBL, Rocket, Upay..."
+          disabled={loading}
+          rows={1}
           className={cn(
-            "h-9 w-9 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
+            "flex-1 bg-transparent border-0 outline-none resize-none py-3.5 px-4",
+            "text-sm text-text placeholder-text-muted",
+            "focus:ring-0 focus:outline-none",
+            "disabled:opacity-30 disabled:cursor-not-allowed",
+            "scrollbar-hide",
+            "min-h-[48px] max-h-[160px]"
+          )}
+        />
+
+        <motion.button
+          whileHover={canSend ? { scale: 1.05 } : undefined}
+          whileTap={canSend ? { scale: 0.95 } : undefined}
+          onClick={handleSubmit}
+          disabled={!canSend}
+          aria-label="Send message"
+          className={cn(
+            "h-10 w-10 rounded-lg flex items-center justify-center shrink-0 mr-2 transition-all duration-200",
             canSend
-              ? "bg-accent text-bg hover:bg-accent-hover"
+              ? "bg-accent text-bg hover:bg-accent-hover shadow-[0_2px_8px_rgba(184,115,51,0.3)]"
               : "bg-white/[0.04] text-text-muted cursor-not-allowed"
           )}
         >
@@ -120,10 +88,10 @@ export function ChatInput({ onSend, loading }: ChatInputProps) {
             <ArrowUp className="w-4 h-4" />
           )}
         </motion.button>
-      </form>
+      </div>
 
       <p className="text-2xs text-text-muted text-center mt-2">
-        Press Enter to send &middot; Shift + Enter for new line
+        Press Enter to send · Shift + Enter for new line
       </p>
     </div>
   );

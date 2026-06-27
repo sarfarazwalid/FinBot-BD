@@ -40,7 +40,7 @@ function EmptyState({ onSelect }: { onSelect: (q: string) => void }) {
 
         {/* Description */}
         <p className="text-sm md:text-base text-text-secondary max-w-lg leading-relaxed mb-4">
-          Your AI banking assistant for Bangladesh.
+          Your AI banking assistant for regional services.
           <br />
           Get instant answers about banking services, cards, PIN reset,
           accounts, transfers, and more.
@@ -161,7 +161,7 @@ export default function Home() {
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="fixed left-0 top-0 h-full z-50 md:hidden"
             >
-              <Sidebar onClose={() => setSidebarOpen(false)} />
+              <Sidebar />
             </motion.div>
           </>
         )}

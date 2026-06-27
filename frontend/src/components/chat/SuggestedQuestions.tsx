@@ -60,7 +60,7 @@ const cardVariants = {
     transition: {
       delay: i * 0.1,
       duration: 0.35,
-      ease: "easeOut",
+      ease: [0.22, 1, 0.36, 1],
     },
   }),
 };
@@ -73,7 +73,7 @@ const buttonVariants = {
     transition: {
       delay: i * 0.06 + 0.25,
       duration: 0.2,
-      ease: "easeOut",
+      ease: [0.22, 1, 0.36, 1],
     },
   }),
 };
@@ -92,6 +92,10 @@ export function SuggestedQuestions({ onSelect }: SuggestedQuestionsProps) {
               variants={cardVariants}
               initial="hidden"
               animate="visible"
+              whileHover={{
+                y: -2,
+                transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+              }}
               className={cn(
                 "panel-elevated p-6 flex flex-col gap-4",
                 "hover:bg-card-hover hover:border-accent/25 hover:shadow-card-hover",
@@ -101,7 +105,7 @@ export function SuggestedQuestions({ onSelect }: SuggestedQuestionsProps) {
               {/* Bank Header */}
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-md bg-card border border-border flex items-center justify-center">
-                  <Icon className="w-4.5 h-4.5 text-accent/80" />
+                  <Icon className="w-4 h-4 text-accent/80" />
                 </div>
                 <div>
                   <span className="text-sm font-medium text-text">{card.bank}</span>
@@ -122,7 +126,8 @@ export function SuggestedQuestions({ onSelect }: SuggestedQuestionsProps) {
                     animate="visible"
                     whileHover={{
                       y: -1,
-                      transition: { duration: 0.15 },
+                      scale: 1.01,
+                      transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1] },
                     }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => onSelect(prompt.text)}

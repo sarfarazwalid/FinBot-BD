@@ -9,7 +9,6 @@ export const metadata: Metadata = {
     "bKash",
     "Nagad",
     "DBBL",
-    "Bangladesh banking",
     "fintech",
     "RAG",
     "AI assistant",
