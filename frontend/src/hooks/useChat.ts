@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useConversations } from "./useConversations";
 import { sendMessage } from "@/lib/api";
+import { generateConversationTitle } from "@/lib/storage";
 
 export function useChat() {
   const {
@@ -10,12 +11,29 @@ export function useChat() {
     activeConversation,
     createConversation,
     setActiveConversation,
+    clearActiveConversation,
     addMessage,
+    updateTitle,
   } = useConversations();
 
   const messages = activeConversation?.messages || [];
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-title after first assistant response
+  useEffect(() => {
+    if (!activeConversation || !activeId) return;
+    const lastMsg = activeConversation.messages[activeConversation.messages.length - 1];
+    if (!lastMsg || lastMsg.role !== "assistant") return;
+    if (activeConversation.title !== "New Conversation") return;
+
+    // Generate title from first user message using intelligent title generator
+    const firstUserMsg = activeConversation.messages.find((m: { role: string }) => m.role === "user");
+    if (firstUserMsg) {
+      const title = generateConversationTitle(firstUserMsg.content);
+      updateTitle(activeId, title);
+    }
+  }, [messages, activeId, activeConversation, updateTitle]);
 
   const send = useCallback(
     async (content: string) => {
@@ -24,7 +42,7 @@ export function useChat() {
 
       let conv = activeConversation;
 
-      // Create new conversation if none active
+      // Only create conversation on first message send
       if (!conv) {
         conv = createConversation();
       }
@@ -36,7 +54,6 @@ export function useChat() {
         timestamp: new Date(),
       };
 
-      // Optimistically add user message
       addMessage(conv.id, userMessage);
 
       try {
@@ -62,9 +79,13 @@ export function useChat() {
   );
 
   const clearChat = useCallback(() => {
-    // Create fresh conversation (doesn't delete old ones)
-    createConversation();
-  }, [createConversation]);
+    // Return to home — do NOT create new conversation
+    clearActiveConversation();
+  }, [clearActiveConversation]);
+
+  const goHome = useCallback(() => {
+    clearActiveConversation();
+  }, [clearActiveConversation]);
 
   return {
     messages,
@@ -72,8 +93,8 @@ export function useChat() {
     error,
     send,
     clearChat,
+    goHome,
     activeId,
-    conversations: [], // populated by useConversations
     setActiveConversation,
   };
 }

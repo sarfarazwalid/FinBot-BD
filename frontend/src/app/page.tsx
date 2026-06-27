@@ -124,7 +124,7 @@ function MobileHeader({
 }
 
 export default function Home() {
-  const { messages, loading, error, send, clearChat } = useChat();
+  const { messages, loading, error, send, clearChat, goHome } = useChat();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const hasMessages = messages.length > 0;
 
@@ -139,7 +139,7 @@ export default function Home() {
     <main className="flex h-screen overflow-hidden bg-bg">
       {/* Desktop Sidebar — fixed 280px */}
       <div className="hidden md:block shrink-0">
-        <Sidebar />
+        <Sidebar onLogoClick={goHome} />
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -161,7 +161,7 @@ export default function Home() {
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="fixed left-0 top-0 h-full z-50 md:hidden"
             >
-              <Sidebar />
+              <Sidebar onLogoClick={goHome} />
             </motion.div>
           </>
         )}
@@ -187,27 +187,45 @@ export default function Home() {
 
         {/* Content Area */}
         <div className="flex-1 relative z-10 min-h-0">
-          {!hasMessages ? (
-            /* ─────────────────────────────────────────────
-               WELCOME LAYOUT
-               Natural height, scrollable, generous spacing
-               ───────────────────────────────────────────── */
-            <div className="h-full overflow-y-auto scrollbar-hide">
-              <EmptyState onSelect={handleSuggestion} />
-            </div>
-          ) : (
-            /* ─────────────────────────────────────────────
-               CONVERSATION LAYOUT
-               Fixed header + scrollable messages + fixed input
-               ───────────────────────────────────────────── */
-            <ChatWindow
-              messages={messages}
-              loading={loading}
-              error={error}
-              onSend={send}
-              onClear={clearChat}
-            />
-          )}
+          <AnimatePresence mode="wait">
+            {!hasMessages ? (
+              /* ─────────────────────────────────────────────
+                 WELCOME LAYOUT
+                 Natural height, scrollable, generous spacing
+                 ───────────────────────────────────────────── */
+              <motion.div
+                key="welcome"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="h-full overflow-y-auto scrollbar-hide"
+              >
+                <EmptyState onSelect={handleSuggestion} />
+              </motion.div>
+            ) : (
+              /* ─────────────────────────────────────────────
+                 CONVERSATION LAYOUT
+                 Fixed header + scrollable messages + fixed input
+                 ───────────────────────────────────────────── */
+              <motion.div
+                key="chat"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="h-full"
+              >
+                <ChatWindow
+                  messages={messages}
+                  loading={loading}
+                  error={error}
+                  onSend={send}
+                  onClear={clearChat}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </main>

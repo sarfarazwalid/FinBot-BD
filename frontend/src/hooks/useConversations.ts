@@ -1,61 +1,10 @@
 "use client";
-
 import { useState, useEffect, useCallback } from "react";
+import { storage, generateConversationTitle } from "@/lib/storage";
+import { Conversation, Message } from "./conversation.types";
 
-export interface Conversation {
-  id: string;
-  title: string;
-  createdAt: number;
-  updatedAt: number;
-  messages: Message[];
-  language?: string;
-  bank?: string;
-}
-
-export interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-  sources?: string[];
-  confidence?: number;
-}
-
-const STORAGE_KEY = "finbot_bd_conversations";
-const ACTIVE_KEY = "finbot_bd_active_id";
-
-function generateId(): string {
-  return `conv_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-}
-
-function loadFromStorage(): { conversations: Conversation[]; activeId: string | null } {
-  if (typeof window === "undefined") {
-    return { conversations: [], activeId: null };
-  }
-
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const conversations: Conversation[] = stored ? JSON.parse(stored) : [];
-    const activeId = localStorage.getItem(ACTIVE_KEY);
-    return { conversations, activeId };
-  } catch {
-    return { conversations: [], activeId: null };
-  }
-}
-
-function saveToStorage(conversations: Conversation[], activeId: string | null) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
-    if (activeId) {
-      localStorage.setItem(ACTIVE_KEY, activeId);
-    } else {
-      localStorage.removeItem(ACTIVE_KEY);
-    }
-  } catch {
-    // Storage full or unavailable
-  }
-}
+// Re-export for backward compatibility
+export type { Conversation, Message };
 
 export function useConversations() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -63,37 +12,20 @@ export function useConversations() {
 
   // Load from storage on mount
   useEffect(() => {
-    const { conversations: stored, activeId: storedActive } = loadFromStorage();
-    if (stored.length > 0) {
-      setConversations(
-        stored.map((c) => ({
-          ...c,
-          messages: c.messages.map((m) => ({
-            ...m,
-            timestamp: new Date(m.timestamp),
-          })),
-        }))
-      );
-      setActiveId(storedActive);
-    }
+    storage.loadConversations().then((loaded) => {
+      setConversations(loaded);
+    });
+    storage.loadActiveId().then(setActiveId);
   }, []);
 
-  // Save to storage on change
-  useEffect(() => {
-    saveToStorage(conversations, activeId);
+  const getActiveConversation = useCallback((): Conversation | null => {
+    return conversations.find((c) => c.id === activeId) || null;
   }, [conversations, activeId]);
-
-  const getActiveConversation = useCallback(
-    (): Conversation | null => {
-      return conversations.find((c) => c.id === activeId) || null;
-    },
-    [conversations, activeId]
-  );
 
   const createConversation = useCallback((): Conversation => {
     const newConv: Conversation = {
-      id: generateId(),
-      title: "",
+      id: crypto.randomUUID(),
+      title: "New Conversation",
       createdAt: Date.now(),
       updatedAt: Date.now(),
       messages: [],
@@ -103,53 +35,99 @@ export function useConversations() {
 
     setConversations((prev) => [newConv, ...prev]);
     setActiveId(newConv.id);
+    storage.saveConversations([newConv, ...conversations]);
+    storage.saveActiveId(newConv.id);
     return newConv;
-  }, []);
+  }, [conversations]);
 
   const deleteConversation = useCallback((id: string) => {
-    setConversations((prev) => prev.filter((c) => c.id !== id));
-    setActiveId((prev) => (prev === id ? null : prev));
+    setConversations((prev) => {
+      const updated = prev.filter((c) => c.id !== id);
+      storage.saveConversations(updated);
+      return updated;
+    });
+    setActiveId((prev) => {
+      if (prev === id) {
+        storage.saveActiveId(null);
+        return null;
+      }
+      return prev;
+    });
+    storage.clearDraft(id);
   }, []);
 
   const updateConversation = useCallback(
     (id: string, updates: Partial<Conversation>) => {
-      setConversations((prev) =>
-        prev.map((c) =>
+      setConversations((prev) => {
+        const updated = prev.map((c) =>
           c.id === id ? { ...c, ...updates, updatedAt: Date.now() } : c
-        )
-      );
+        );
+        // Re-sort: pinned first, then by updatedAt DESC
+        updated.sort((a, b) => {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          return b.updatedAt - a.updatedAt;
+        });
+        storage.saveConversations(updated);
+        return updated;
+      });
     },
     []
   );
 
   const setActiveConversation = useCallback((id: string) => {
     setActiveId(id);
+    storage.saveActiveId(id);
   }, []);
 
-  const addMessage = useCallback(
-    (conversationId: string, message: Message) => {
-      setConversations((prev) =>
-        prev.map((c) => {
-          if (c.id !== conversationId) return c;
+  const clearActiveConversation = useCallback(() => {
+    setActiveId(null);
+    storage.saveActiveId(null);
+  }, []);
 
-          const updated = {
-            ...c,
-            messages: [...c.messages, message],
-            updatedAt: Date.now(),
-          };
+  const addMessage = useCallback((conversationId: string, message: Message) => {
+    setConversations((prev) => {
+      const updated = prev.map((c) => {
+        if (c.id !== conversationId) return c;
+        return {
+          ...c,
+          messages: [...c.messages, message],
+          updatedAt: Date.now(),
+        };
+      });
+      // Re-sort
+      updated.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return b.updatedAt - a.updatedAt;
+      });
+      storage.saveConversations(updated);
+      return updated;
+    });
+  }, []);
 
-          // Auto-title from first user message
-          if (c.messages.length === 0 && message.role === "user") {
-            const title = message.content.slice(0, 40).trim();
-            updated.title = title.length < message.content.length ? title + "…" : title;
-          }
+  const updateTitle = useCallback((conversationId: string, title: string) => {
+    updateConversation(conversationId, { title });
+  }, [updateConversation]);
 
-          return updated;
-        })
-      );
-    },
-    []
-  );
+  const pinConversation = useCallback((id: string) => {
+    updateConversation(id, { pinned: true });
+  }, [updateConversation]);
+
+  const unpinConversation = useCallback((id: string) => {
+    updateConversation(id, { pinned: false });
+  }, [updateConversation]);
+
+  const archiveConversation = useCallback((id: string) => {
+    updateConversation(id, { archived: true });
+    if (activeId === id) {
+      clearActiveConversation();
+    }
+  }, [updateConversation, activeId, clearActiveConversation]);
+
+  const unarchiveConversation = useCallback((id: string) => {
+    updateConversation(id, { archived: false });
+  }, [updateConversation]);
 
   return {
     conversations,
@@ -159,6 +137,12 @@ export function useConversations() {
     deleteConversation,
     updateConversation,
     setActiveConversation,
+    clearActiveConversation,
     addMessage,
+    updateTitle,
+    pinConversation,
+    unpinConversation,
+    archiveConversation,
+    unarchiveConversation,
   };
 }

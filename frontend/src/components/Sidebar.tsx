@@ -39,7 +39,7 @@ function timeAgo(timestamp: number): string {
   });
 }
 
-export function Sidebar() {
+export function Sidebar({ onLogoClick }: { onLogoClick?: () => void }) {
   const [expandedSection, setExpandedSection] = useState<string | null>("recent");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -48,6 +48,7 @@ export function Sidebar() {
     activeId,
     createConversation,
     setActiveConversation,
+    clearActiveConversation,
     deleteConversation,
   } = useConversations();
 
@@ -145,9 +146,15 @@ export function Sidebar() {
       transition={{ duration: 0.3, ease: "easeOut" }}
       className="w-[280px] h-full flex flex-col bg-surface border-r border-border"
     >
-      {/* Brand Header */}
+      {/* Brand Header — clickable to go home */}
       <div className="px-4 py-4 border-b border-divider">
-        <div className="flex items-center gap-2.5">
+        <button
+          onClick={() => {
+            clearActiveConversation();
+            onLogoClick?.();
+          }}
+          className="flex items-center gap-2.5 w-full text-left"
+        >
           <div className="w-8 h-8 rounded-md bg-accent flex items-center justify-center text-bg font-bold text-sm">
             F
           </div>
@@ -157,7 +164,7 @@ export function Sidebar() {
             </h1>
             <p className="text-2xs text-text-muted truncate">Banking Intelligence</p>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* New Conversation Button */}
@@ -165,7 +172,7 @@ export function Sidebar() {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={createConversation}
+          onClick={clearActiveConversation}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-text bg-accent/10 border border-accent/20 hover:bg-accent/15 hover:border-accent/30 transition-all duration-200"
         >
           <Plus className="w-4 h-4 text-accent" />
