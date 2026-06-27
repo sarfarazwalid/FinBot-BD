@@ -1,0 +1,3 @@
+with open(r'c:\Important\FinBot BD\frontend\src\hooks\useConversations.ts', 'r', encoding='utf-8') as f: c = f.read()
+c = c.replace('storage.saveConversations', 'REPLACED')
+open(r'c:\Important\FinBot BD\frontend\src\hooks\useConversations.ts','w',encoding='utf-8').write(c)

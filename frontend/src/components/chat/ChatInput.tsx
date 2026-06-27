@@ -6,13 +6,20 @@ import { ArrowUp, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
+  autoFocus?: boolean;
   onSend: (message: string) => void;
   loading: boolean;
 }
 
-export function ChatInput({ onSend, loading }: ChatInputProps) {
+export function ChatInput({ onSend, loading, autoFocus }: ChatInputProps) {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (autoFocus && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [autoFocus]);
 
   useEffect(() => {
     const el = textareaRef.current;

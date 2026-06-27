@@ -22,10 +22,10 @@ export interface Message {
   confidence?: number;
 }
 
-const STORAGE_KEY = "finbot_bd_conversations";
-const ACTIVE_KEY = "finbot_bd_active_id";
-const SIDEBAR_SCROLL_KEY = "finbot_bd_sidebar_scroll";
-const DRAFTS_KEY = "finbot_bd_drafts";
+export const STORAGE_KEY = "finbot_bd_conversations";
+export const ACTIVE_KEY = "finbot_bd_active_id";
+export const SIDEBAR_SCROLL_KEY = "finbot_bd_sidebar_scroll";
+export const DRAFTS_KEY = "finbot_bd_drafts";
 
 function generateId(): string {
   return `conv_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;

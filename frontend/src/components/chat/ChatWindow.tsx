@@ -9,6 +9,7 @@ import {
 import { Message } from "@/types";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
+import { SuggestedQuestions } from "./SuggestedQuestions";
 import { cn } from "@/lib/utils";
 
 interface ChatWindowProps {
@@ -17,6 +18,8 @@ interface ChatWindowProps {
   error: string | null;
   onSend: (message: string) => void;
   onClear: () => void;
+  isEmpty?: boolean;
+  title?: string;
 }
 
 const STATUS_STAGES = [
@@ -140,6 +143,8 @@ export function ChatWindow({
   error,
   onSend,
   onClear,
+  isEmpty,
+  title = "New Conversation",
 }: ChatWindowProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -179,7 +184,19 @@ export function ChatWindow({
               F
             </div>
             <div>
-              <h2 className="text-sm font-medium text-text">FinBot BD</h2>
+              <h2 className="text-sm font-medium text-text">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={title}
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {title}
+                </motion.span>
+              </AnimatePresence>
+            </h2>
               <div className="flex items-center gap-1.5">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
@@ -211,11 +228,36 @@ export function ChatWindow({
         className="flex-1 overflow-y-auto scrollbar-hide relative"
       >
         <div className="px-4 sm:px-6 lg:px-8 py-4 space-y-5">
-          <AnimatePresence mode="popLayout">
-            {messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
-            ))}
-          </AnimatePresence>
+          {isEmpty ? (
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="flex flex-col items-center justify-center text-center py-12"
+            >
+              <div className="w-16 h-16 rounded-xl bg-accent flex items-center justify-center text-bg font-bold text-2xl mb-6 shadow-lg">
+                F
+              </div>
+              <h2 className="text-xl sm:text-2xl font-heading font-semibold text-text tracking-tight mb-2">
+                Hello! 
+              </h2>
+              <p className="text-sm md:text-base text-text-secondary max-w-md leading-relaxed mb-1">
+                I'm FinBot, your Intelligent Banking Assistant.
+              </p>
+              <p className="text-sm md:text-base text-text-secondary max-w-md leading-relaxed mb-8">
+                How can I assist you today?
+              </p>
+              <div className="w-full max-w-2xl">
+                <SuggestedQuestions onSelect={onSend} />
+              </div>
+            </motion.div>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {messages.map((msg) => (
+                <MessageBubble key={msg.id} message={msg} />
+              ))}
+            </AnimatePresence>
+          )}
 
           <AnimatePresence>
             {loading && <TypingIndicator />}
@@ -235,7 +277,7 @@ export function ChatWindow({
 
       {/* Sticky Input — fluid, aligned with messages */}
       <div className="sticky bottom-0 z-20 bg-gradient-to-t from-bg via-bg/95 to-transparent pt-6 pb-3 px-4 sm:px-6 lg:px-8">
-        <ChatInput onSend={onSend} loading={loading} />
+        <ChatInput onSend={onSend} loading={loading} autoFocus={isEmpty} />
       </div>
     </div>
   );

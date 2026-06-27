@@ -1,0 +1,1 @@
+const fs=require(\"fs\"); const p=\\"c:\\Important\\FinBot BD\\frontend\\src\\components\\chat\\ChatWindow.tsx\\"; let c=fs.readFileSync(p,\"utf8\"); c=c.replace(\"FinBot BD\", \"{title}\"); fs.writeFileSync(p,c); console.log(\"OK\");

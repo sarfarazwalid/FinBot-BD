@@ -1,0 +1,1 @@
+with open(r'c:\\path', 'r') as f: c = f.read()

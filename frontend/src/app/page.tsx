@@ -124,9 +124,10 @@ function MobileHeader({
 }
 
 export default function Home() {
-  const { messages, loading, error, send, clearChat, goHome } = useChat();
+  const { messages, loading, error, send, clearChat, goHome, activeId, activeConversation, createConversation, setActiveConversation, conversations } = useChat();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const hasMessages = messages.length > 0;
+  const inConversation = activeId !== null;
 
   const handleSuggestion = useCallback(
     (question: string) => {
@@ -139,7 +140,7 @@ export default function Home() {
     <main className="flex h-screen overflow-hidden bg-bg">
       {/* Desktop Sidebar — fixed 280px */}
       <div className="hidden md:block shrink-0">
-        <Sidebar onLogoClick={goHome} />
+        <Sidebar onLogoClick={goHome} onNewConversation={createConversation} onSelectConversation={setActiveConversation} conversations={conversations} activeId={activeId} />
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -161,7 +162,7 @@ export default function Home() {
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="fixed left-0 top-0 h-full z-50 md:hidden"
             >
-              <Sidebar onLogoClick={goHome} />
+              <Sidebar onLogoClick={goHome} onNewConversation={createConversation} onSelectConversation={setActiveConversation} conversations={conversations} activeId={activeId} />
             </motion.div>
           </>
         )}
@@ -188,7 +189,7 @@ export default function Home() {
         {/* Content Area */}
         <div className="flex-1 relative z-10 min-h-0">
           <AnimatePresence mode="wait">
-            {!hasMessages ? (
+            {!inConversation ? (
               /* ─────────────────────────────────────────────
                  WELCOME LAYOUT
                  Natural height, scrollable, generous spacing
@@ -222,6 +223,8 @@ export default function Home() {
                   error={error}
                   onSend={send}
                   onClear={clearChat}
+                  isEmpty={!hasMessages}
+                  title={activeConversation?.title || "New Conversation"}
                 />
               </motion.div>
             )}

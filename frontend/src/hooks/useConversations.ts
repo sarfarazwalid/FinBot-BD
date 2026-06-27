@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { storage, generateConversationTitle } from "@/lib/storage";
+import { storage, generateConversationTitle, STORAGE_KEY, ACTIVE_KEY } from "@/lib/storage";
 import { Conversation, Message } from "./conversation.types";
 
 // Re-export for backward compatibility
@@ -33,22 +33,51 @@ export function useConversations() {
       bank: undefined,
     };
 
-    setConversations((prev) => [newConv, ...prev]);
+    // Read fresh from storage to avoid stale closure issues
+    let latestConversations: Conversation[] = [];
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      latestConversations = stored ? JSON.parse(stored) : [];
+    } catch {
+      latestConversations = [];
+    }
+
+    // Atomically remove empty active conversation (if any)
+    const filtered = latestConversations.filter(
+      (c) => c.id !== activeId || c.messages.length > 0
+    );
+    const next = [newConv, ...filtered];
+
+    setConversations(next);
     setActiveId(newConv.id);
-    storage.saveConversations([newConv, ...conversations]);
-    storage.saveActiveId(newConv.id);
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Storage full
+    }
+    localStorage.setItem(ACTIVE_KEY, newConv.id);
+
+    if (activeId) {
+      storage.clearDraft(activeId);
+    }
+
     return newConv;
-  }, [conversations]);
+  }, [activeId]);
 
   const deleteConversation = useCallback((id: string) => {
     setConversations((prev) => {
       const updated = prev.filter((c) => c.id !== id);
-      storage.saveConversations(updated);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // Storage full
+      }
       return updated;
     });
     setActiveId((prev) => {
       if (prev === id) {
-        storage.saveActiveId(null);
+        localStorage.removeItem(ACTIVE_KEY);
         return null;
       }
       return prev;
@@ -68,7 +97,11 @@ export function useConversations() {
           if (!a.pinned && b.pinned) return 1;
           return b.updatedAt - a.updatedAt;
         });
-        storage.saveConversations(updated);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        } catch {
+          // Storage full
+        }
         return updated;
       });
     },
@@ -77,12 +110,12 @@ export function useConversations() {
 
   const setActiveConversation = useCallback((id: string) => {
     setActiveId(id);
-    storage.saveActiveId(id);
+    localStorage.setItem(ACTIVE_KEY, id);
   }, []);
 
   const clearActiveConversation = useCallback(() => {
     setActiveId(null);
-    storage.saveActiveId(null);
+    localStorage.removeItem(ACTIVE_KEY);
   }, []);
 
   const addMessage = useCallback((conversationId: string, message: Message) => {
@@ -101,7 +134,11 @@ export function useConversations() {
         if (!a.pinned && b.pinned) return 1;
         return b.updatedAt - a.updatedAt;
       });
-      storage.saveConversations(updated);
+      try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        } catch {
+          // Storage full
+        }
       return updated;
     });
   }, []);

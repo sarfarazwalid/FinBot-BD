@@ -7,11 +7,13 @@ import { generateConversationTitle } from "@/lib/storage";
 
 export function useChat() {
   const {
+    conversations,
     activeId,
     activeConversation,
     createConversation,
     setActiveConversation,
     clearActiveConversation,
+    deleteConversation,
     addMessage,
     updateTitle,
   } = useConversations();
@@ -79,13 +81,18 @@ export function useChat() {
   );
 
   const clearChat = useCallback(() => {
-    // Return to home — do NOT create new conversation
+    if (activeConversation && activeConversation.messages.length === 0) {
+      deleteConversation(activeConversation.id);
+    }
     clearActiveConversation();
-  }, [clearActiveConversation]);
+  }, [clearActiveConversation, deleteConversation, activeConversation]);
 
   const goHome = useCallback(() => {
+    if (activeConversation && activeConversation.messages.length === 0) {
+      deleteConversation(activeConversation.id);
+    }
     clearActiveConversation();
-  }, [clearActiveConversation]);
+  }, [clearActiveConversation, deleteConversation, activeConversation]);
 
   return {
     messages,
@@ -95,6 +102,9 @@ export function useChat() {
     clearChat,
     goHome,
     activeId,
+    activeConversation,
     setActiveConversation,
+    conversations,
+    createConversation,
   };
 }

@@ -1,0 +1,1 @@
+with open(r"c:\Important\FinBot BD\frontend\src\hooks\useConversations.ts", "r", encoding="utf-8") as f: c = f.read()

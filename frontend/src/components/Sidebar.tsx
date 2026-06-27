@@ -11,6 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Conversation } from "@/hooks/conversation.types";
 import { useConversations } from "@/hooks/useConversations";
 
 const bankColors: Record<string, string> = {
@@ -39,18 +40,14 @@ function timeAgo(timestamp: number): string {
   });
 }
 
-export function Sidebar({ onLogoClick }: { onLogoClick?: () => void }) {
+export function Sidebar({ onLogoClick, onNewConversation, onSelectConversation, conversations: externalConversations, activeId: externalActiveId }: { onLogoClick?: () => void; onNewConversation?: () => void; onSelectConversation?: (id: string) => void; conversations?: Conversation[]; activeId?: string | null }) {
   const [expandedSection, setExpandedSection] = useState<string | null>("recent");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const {
-    conversations,
-    activeId,
-    createConversation,
-    setActiveConversation,
-    clearActiveConversation,
-    deleteConversation,
-  } = useConversations();
+  const hookData = useConversations();
+  const conversations = externalConversations ?? hookData.conversations;
+  const activeId = externalActiveId ?? hookData.activeId;
+  const { createConversation, setActiveConversation, clearActiveConversation, deleteConversation } = hookData;
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -82,7 +79,7 @@ export function Sidebar({ onLogoClick }: { onLogoClick?: () => void }) {
     return (
       c.title.toLowerCase().includes(q) ||
       c.bank?.toLowerCase().includes(q) ||
-      c.messages.some((m) => m.content.toLowerCase().includes(q))
+      c.messages.some((m: { content: string }) => m.content.toLowerCase().includes(q))
     );
   });
 
@@ -100,7 +97,7 @@ export function Sidebar({ onLogoClick }: { onLogoClick?: () => void }) {
             key={conv.id}
             whileHover={{ x: 2 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveConversation(conv.id)}
+            onClick={() => onSelectConversation ? onSelectConversation(conv.id) : setActiveConversation(conv.id)}
             className={cn(
               "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all duration-200 group",
               conv.id === activeId
@@ -172,7 +169,7 @@ export function Sidebar({ onLogoClick }: { onLogoClick?: () => void }) {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={clearActiveConversation}
+          onClick={() => { if (onNewConversation) { onNewConversation(); } else { createConversation(); } }}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-text bg-accent/10 border border-accent/20 hover:bg-accent/15 hover:border-accent/30 transition-all duration-200"
         >
           <Plus className="w-4 h-4 text-accent" />
