@@ -1,16 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Send,
   Loader2,
-  Sparkles,
   Mic,
   Paperclip,
-  X,
   ArrowUp,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -22,7 +20,6 @@ export function ChatInput({ onSend, loading }: ChatInputProps) {
   const [focused, setFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize textarea
   useEffect(() => {
     const el = textareaRef.current;
     if (el) {
@@ -52,44 +49,29 @@ export function ChatInput({ onSend, loading }: ChatInputProps) {
 
   return (
     <div className="relative">
-      {/* Gradient border glow */}
-      <div
-        className={cn(
-          "absolute -inset-[1px] rounded-2xl opacity-0 transition-opacity duration-300",
-          focused && "opacity-100"
-        )}
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(6, 182, 212, 0.3))",
-          filter: "blur(4px)",
-        }}
-      />
-
       <form
         onSubmit={(e) => {
           e.preventDefault();
           handleSubmit();
         }}
         className={cn(
-          "relative flex items-end gap-2 p-2 rounded-2xl transition-all duration-300",
-          "bg-surface-elevated/80 backdrop-blur-xl border",
-          focused
-            ? "border-primary/30 shadow-glow"
-            : "border-border hover:border-white/20"
+          "relative flex items-end gap-2 p-2 rounded-lg transition-all duration-200",
+          "bg-card/80 backdrop-blur-sm border",
+          focused ? "border-accent/40" : "border-border hover:border-accent/20"
         )}
       >
         {/* Left controls */}
         <div className="flex items-center gap-1">
           <button
             type="button"
-            className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200"
+            className="h-8 w-8 rounded-md flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-white/[0.03] transition-all duration-200"
             title="Attach file"
           >
             <Paperclip className="w-4 h-4" />
           </button>
           <button
             type="button"
-            className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200"
+            className="h-8 w-8 rounded-md flex items-center justify-center text-text-muted hover:text-text-secondary hover:bg-white/[0.03] transition-all duration-200"
             title="Voice input"
           >
             <Mic className="w-4 h-4" />
@@ -97,7 +79,7 @@ export function ChatInput({ onSend, loading }: ChatInputProps) {
         </div>
 
         {/* Input */}
-        <div className="flex-1 min-w-0 relative">
+        <div className="flex-1 min-w-0">
           <textarea
             ref={textareaRef}
             value={input}
@@ -105,14 +87,14 @@ export function ChatInput({ onSend, loading }: ChatInputProps) {
             onKeyDown={handleKeyDown}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            placeholder="Ask about bKash, Nagad, DBBL..."
+            placeholder="Ask your question"
             rows={1}
             disabled={loading}
             className={cn(
               "w-full bg-transparent border-0 outline-none resize-none py-2 px-0",
-              "text-sm text-foreground placeholder-muted-foreground",
+              "text-sm text-text placeholder-text-muted",
               "focus:ring-0 focus:outline-none",
-              "disabled:opacity-40 disabled:cursor-not-allowed",
+              "disabled:opacity-30 disabled:cursor-not-allowed",
               "scrollbar-hide"
             )}
             style={{ minHeight: "20px", maxHeight: "160px" }}
@@ -121,15 +103,15 @@ export function ChatInput({ onSend, loading }: ChatInputProps) {
 
         {/* Send button */}
         <motion.button
-          whileHover={canSend ? { scale: 1.05 } : undefined}
-          whileTap={canSend ? { scale: 0.95 } : undefined}
+          whileHover={canSend ? { scale: 1.02 } : undefined}
+          whileTap={canSend ? { scale: 0.98 } : undefined}
           type="submit"
           disabled={!canSend}
           className={cn(
-            "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200",
+            "h-9 w-9 rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
             canSend
-              ? "bg-primary text-primary-foreground shadow-glow hover:bg-primary-hover"
-              : "bg-white/5 text-muted-foreground cursor-not-allowed"
+              ? "bg-accent text-bg hover:bg-accent-hover"
+              : "bg-white/[0.04] text-text-muted cursor-not-allowed"
           )}
         >
           {loading ? (
@@ -140,23 +122,9 @@ export function ChatInput({ onSend, loading }: ChatInputProps) {
         </motion.button>
       </form>
 
-      {/* Bottom hint */}
-      <AnimatePresence>
-        {!focused && !input && !loading && (
-          <motion.p
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            className="text-2xs text-muted-foreground/60 text-center mt-2"
-          >
-            Press Enter to send · Shift + Enter for new line
-          </motion.p>
-        )}
-      </AnimatePresence>
+      <p className="text-2xs text-text-muted text-center mt-2">
+        Press Enter to send &middot; Shift + Enter for new line
+      </p>
     </div>
   );
-}
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
 }

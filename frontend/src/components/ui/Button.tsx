@@ -1,13 +1,13 @@
 "use client";
 
-import { forwardRef, useRef, useState } from "react";
+import { forwardRef } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 interface ButtonProps {
-  variant?: "primary" | "secondary" | "ghost" | "danger" | "outline";
-  size?: "sm" | "md" | "lg" | "icon";
+  variant?: "primary" | "secondary" | "ghost" | "danger";
+  size?: "sm" | "md" | "lg";
   loading?: boolean;
   disabled?: boolean;
   className?: string;
@@ -30,26 +30,21 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    const buttonRef = useRef<HTMLButtonElement | null>(null);
-
     const variants = {
       primary:
-        "bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active shadow-glow hover:shadow-glow-md disabled:shadow-none",
+        "bg-accent text-[#16120E] font-semibold hover:bg-accent-hover shadow-button hover:shadow-button-hover disabled:shadow-none",
       secondary:
-        "bg-surface-elevated text-foreground hover:bg-white/10 active:bg-white/[0.08] border border-border disabled:border-transparent",
+        "bg-transparent text-text border border-accent/30 hover:border-accent/60 hover:text-accent-hover disabled:border-border",
       ghost:
-        "bg-transparent text-muted-foreground hover:text-foreground hover:bg-white/5 active:bg-white/[0.08]",
+        "bg-transparent text-text-secondary hover:text-text hover:bg-white/[0.03] active:bg-white/[0.05]",
       danger:
-        "bg-rose text-white hover:bg-rose-hover active:bg-rose/80 shadow-glow-rose hover:shadow-[0_0_30px_rgba(244,63,94,0.2)] disabled:shadow-none",
-      outline:
-        "bg-transparent text-foreground border border-border hover:border-primary/50 hover:text-primary active:bg-primary-muted",
+        "bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20 hover:border-danger/40",
     };
 
     const sizes = {
-      sm: "h-8 px-3 text-xs gap-1.5 rounded-lg",
-      md: "h-9 px-4 text-sm gap-2 rounded-xl",
-      lg: "h-11 px-6 text-base gap-2.5 rounded-xl",
-      icon: "h-9 w-9 rounded-xl",
+      sm: "h-8 px-3 text-xs gap-1.5 rounded-md",
+      md: "h-10 px-4 text-sm gap-2 rounded-lg",
+      lg: "h-12 px-6 text-base gap-2.5 rounded-lg",
     };
 
     const isDisabled = disabled || loading;
@@ -57,7 +52,6 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <motion.button
         ref={(node) => {
-          buttonRef.current = node;
           if (typeof ref === "function") ref(node);
           else if (ref) (ref as React.MutableRefObject<HTMLButtonElement | null>).current = node;
         }}
@@ -67,9 +61,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={isDisabled}
         onClick={onClick}
         className={cn(
-          "relative inline-flex items-center justify-center font-medium transition-all duration-200 overflow-hidden",
-          "focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2",
-          "disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none",
+          "relative inline-flex items-center justify-center font-medium transition-all duration-200",
+          "focus-visible:outline-2 focus-visible:outline-accent/40 focus-visible:outline-offset-2",
+          "disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none",
           "select-none",
           variants[variant],
           sizes[size],

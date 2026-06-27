@@ -13,8 +13,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, size = "md", error, ...props }, ref) => {
     const sizes = {
       sm: "h-8 text-xs px-3",
-      md: "h-9 text-sm px-3.5",
-      lg: "h-11 text-base px-4",
+      md: "h-10 text-sm px-4",
+      lg: "h-12 text-base px-5",
     };
 
     return (
@@ -22,13 +22,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           className={cn(
-            "w-full bg-surface-elevated border border-border rounded-xl",
-            "text-foreground placeholder-muted-foreground",
-            "transition-all duration-200 ease-out-quart",
-            "focus:border-primary/50 focus:bg-white/[0.03] focus:shadow-glow focus:outline-none",
-            "hover:border-white/20",
-            "disabled:opacity-40 disabled:cursor-not-allowed",
-            error && "border-rose/50 hover:border-rose focus:border-rose focus:shadow-glow-rose",
+            "w-full bg-card text-text placeholder-text-muted",
+            "border border-border rounded-lg",
+            "transition-all duration-200 ease-out",
+            "focus:border-accent/50 focus:bg-card focus:outline-none",
+            "hover:border-accent/30",
+            "disabled:opacity-30 disabled:cursor-not-allowed",
+            error && "border-danger/50 hover:border-danger focus:border-danger",
             sizes[size],
             className
           )}
@@ -36,9 +36,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         />
         {error && (
           <motion.p
-            initial={{ opacity: 0, y: -4 }}
+            initial={{ opacity: 0, y: -2 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-2xs text-rose mt-1.5 px-1"
+            className="text-2xs text-danger mt-1.5 px-1"
           >
             {error}
           </motion.p>

@@ -2,16 +2,10 @@
 
 import { motion } from "framer-motion";
 import {
-  Sparkles,
-  HelpCircle,
   Banknote,
-  ShieldCheck,
-  TrendingUp,
-  Lock,
-  RefreshCw,
   CreditCard,
+  Building2,
   ArrowRight,
-  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,112 +13,151 @@ interface SuggestedQuestionsProps {
   onSelect: (question: string) => void;
 }
 
-const questions = [
+interface PromptCard {
+  bank: string;
+  icon: typeof Banknote;
+  prompts: {
+    flag: string;
+    text: string;
+  }[];
+}
+
+const prompts: PromptCard[] = [
   {
-    category: "bKash",
+    bank: "bKash",
     icon: Banknote,
-    color: "text-pink-400",
-    bg: "bg-pink-500/10",
-    items: [
-      "How do I reset my bKash PIN?",
-      "What is the bKash cash-out charge?",
-      "How to send money from bKash?",
+    prompts: [
+      { flag: "🇬🇧", text: "How do I reset my bKash PIN?" },
+      { flag: "🇧🇩", text: "আমি কীভাবে bKash PIN রিসেট করব?" },
+      { flag: "🗣️", text: "bKash PIN kivabe reset korbo?" },
     ],
   },
   {
-    category: "Nagad",
+    bank: "Nagad",
     icon: CreditCard,
-    color: "text-orange-400",
-    bg: "bg-orange-500/10",
-    items: [
-      "How to open a Nagad account?",
-      "Nagad cash-out fees and limits",
-      "How to block my Nagad account?",
+    prompts: [
+      { flag: "🇬🇧", text: "How do I reset my Nagad PIN?" },
+      { flag: "🇧🇩", text: "আমি কীভাবে Nagad PIN রিসেট করব?" },
+      { flag: "🗣️", text: "Nagad PIN kivabe reset korbo?" },
     ],
   },
   {
-    category: "DBBL",
-    icon: ShieldCheck,
-    color: "text-blue-400",
-    bg: "bg-blue-500/10",
-    items: [
-      "How to open a DBBL account?",
-      "DBBL Nexus card benefits",
-      "How to check DBBL balance?",
-    ],
-  },
-  {
-    category: "General",
-    icon: HelpCircle,
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10",
-    items: [
-      "What banking services do you support?",
-      "How secure is mobile banking?",
-      "Compare bKash vs Nagad fees",
+    bank: "DBBL",
+    icon: Building2,
+    prompts: [
+      { flag: "🇬🇧", text: "How do I reset my DBBL PIN?" },
+      { flag: "🇧🇩", text: "আমি কীভাবে DBBL PIN রিসেট করব?" },
+      { flag: "🗣️", text: "DBBL PIN kivabe reset korbo?" },
     ],
   },
 ];
 
-const containerVariants = {
-  hidden: {},
-  visible: {
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
     transition: {
-      staggerChildren: 0.05,
+      delay: i * 0.1,
+      duration: 0.35,
+      ease: "easeOut",
     },
-  },
+  }),
 };
 
-const questionVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0 },
+const buttonVariants = {
+  hidden: { opacity: 0, x: -8 },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: i * 0.06 + 0.25,
+      duration: 0.2,
+      ease: "easeOut",
+    },
+  }),
 };
 
 export function SuggestedQuestions({ onSelect }: SuggestedQuestionsProps) {
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-4"
-    >
-      {questions.map((section, idx) => (
-        <motion.div
-          key={section.category}
-          variants={questionVariants}
-          transition={{ delay: idx * 0.05 }}
-        >
-          <div className="flex items-center gap-2 mb-2.5 px-1">
-            <div className={cn("w-5 h-5 rounded-lg flex items-center justify-center", section.bg)}>
-              <section.icon className={cn("w-3 h-3", section.color)} />
-            </div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {section.category}
-            </span>
+    <div className="w-full">
+      {/* Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {prompts.map((card, cardIdx) => {
+          const Icon = card.icon;
+          return (
+            <motion.div
+              key={card.bank}
+              custom={cardIdx}
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              className={cn(
+                "panel-elevated p-6 flex flex-col gap-4",
+                "hover:bg-card-hover hover:border-accent/25 hover:shadow-card-hover",
+                "transition-all duration-200"
+              )}
+            >
+              {/* Bank Header */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-md bg-card border border-border flex items-center justify-center">
+                  <Icon className="w-4.5 h-4.5 text-accent/80" />
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-text">{card.bank}</span>
+                  <p className="text-2xs text-text-muted mt-0.5">PIN Reset</p>
+                </div>
+              </div>
+
+              <div className="border-t border-divider" />
+
+              {/* Prompt Buttons */}
+              <div className="flex flex-col gap-2.5">
+                {card.prompts.map((prompt, pIdx) => (
+                  <motion.button
+                    key={prompt.text}
+                    custom={pIdx}
+                    variants={buttonVariants}
+                    initial="hidden"
+                    animate="visible"
+                    whileHover={{
+                      y: -1,
+                      transition: { duration: 0.15 },
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => onSelect(prompt.text)}
+                    className={cn(
+                      "group flex items-start gap-2.5 w-full text-left px-3.5 py-2.5",
+                      "rounded-md text-xs transition-all duration-200",
+                      "bg-white/[0.02] border border-divider",
+                      "hover:bg-white/[0.04] hover:border-accent/30 hover:shadow-sm",
+                      "text-text-secondary hover:text-text"
+                    )}
+                  >
+                    <span className="text-xs shrink-0 mt-0.5 leading-none">
+                      {prompt.flag}
+                    </span>
+                    <span className="flex-1 leading-relaxed">{prompt.text}</span>
+                    <ArrowRight className="w-3 h-3 shrink-0 opacity-0 -translate-x-1 group-hover:opacity-60 group-hover:translate-x-0 transition-all duration-200 mt-0.5" />
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Scroll hint — mobile only */}
+      <div className="md:hidden flex justify-center mt-4">
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/[0.02] border border-divider">
+          <div className="flex gap-1">
+            <span className="block w-1 h-1 rounded-full bg-text-muted animate-pulse-subtle" />
+            <span className="block w-1 h-1 rounded-full bg-text-muted animate-pulse-subtle" style={{ animationDelay: "0.3s" }} />
+            <span className="block w-1 h-1 rounded-full bg-text-muted animate-pulse-subtle" style={{ animationDelay: "0.6s" }} />
           </div>
-          <div className="grid gap-1.5">
-            {section.items.map((question, qIdx) => (
-              <motion.button
-                key={question}
-                whileHover={{ x: 4 }}
-                whileTap={{ scale: 0.99 }}
-                onClick={() => onSelect(question)}
-                className={cn(
-                  "group flex items-center gap-3 w-full text-left px-3.5 py-2.5",
-                  "rounded-xl text-xs transition-all duration-200",
-                  "bg-white/[0.02] border border-white/[0.04]",
-                  "hover:bg-white/[0.05] hover:border-white/10",
-                  "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <MessageCircle className="w-3.5 h-3.5 shrink-0 text-primary/60 group-hover:text-primary transition-colors duration-200" />
-                <span className="flex-1 leading-relaxed">{question}</span>
-                <ArrowRight className="w-3.5 h-3.5 shrink-0 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
-      ))}
-    </motion.div>
+          <span className="text-2xs text-text-muted">Swipe to explore</span>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -7,7 +7,6 @@ interface CardProps {
   children: React.ReactNode;
   className?: string;
   hover?: boolean;
-  glow?: boolean;
   onClick?: () => void;
 }
 
@@ -26,28 +25,16 @@ interface CardFooterProps {
   className?: string;
 }
 
-export function Card({
-  children,
-  className,
-  hover = false,
-  glow = false,
-  onClick,
-}: CardProps) {
+export function Card({ children, className, hover = false, onClick }: CardProps) {
   const Component = hover ? motion.div : "div";
 
   return (
     <Component
-      {...(hover
-        ? {
-            whileHover: { y: -2 },
-            transition: { type: "spring", stiffness: 300, damping: 20 },
-          }
-        : {})}
+      {...(hover ? { whileHover: { y: -2 }, transition: { duration: 0.2 } } : {})}
       onClick={onClick}
       className={cn(
-        "glass-card rounded-2xl p-4",
-        glow && "glow",
-        hover && "cursor-pointer",
+        "panel-elevated p-5",
+        hover && "panel-hover cursor-pointer",
         onClick && "cursor-pointer",
         className
       )}
@@ -58,11 +45,7 @@ export function Card({
 }
 
 export function CardHeader({ children, className }: CardHeaderProps) {
-  return (
-    <div className={cn("flex items-center gap-3 mb-3", className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn("flex items-center gap-3 mb-4", className)}>{children}</div>;
 }
 
 export function CardContent({ children, className }: CardContentProps) {
@@ -71,12 +54,7 @@ export function CardContent({ children, className }: CardContentProps) {
 
 export function CardFooter({ children, className }: CardFooterProps) {
   return (
-    <div
-      className={cn(
-        "flex items-center gap-2 mt-3 pt-3 border-t border-white/5",
-        className
-      )}
-    >
+    <div className={cn("flex items-center gap-2 mt-4 pt-4 border-t border-divider", className)}>
       {children}
     </div>
   );

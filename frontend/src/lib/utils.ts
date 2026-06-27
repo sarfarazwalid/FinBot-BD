@@ -29,18 +29,18 @@ export function formatConfidence(confidence: number): {
   if (confidence >= 0.8)
     return {
       label: "High confidence",
-      color: "text-emerald-400",
-      barColor: "bg-emerald-400",
+      color: "text-success",
+      barColor: "bg-success",
     };
   if (confidence >= 0.5)
     return {
       label: "Medium confidence",
-      color: "text-amber-400",
-      barColor: "bg-amber-400",
+      color: "text-warning",
+      barColor: "bg-warning",
     };
   return {
     label: "Low confidence",
-    color: "text-rose-400",
-    barColor: "bg-rose-400",
+    color: "text-danger",
+    barColor: "bg-danger",
   };
 }

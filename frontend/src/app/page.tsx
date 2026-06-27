@@ -3,108 +3,96 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles,
   Menu,
   X,
-  MessageSquare,
-  ArrowRight,
-  TrendingUp,
-  ShieldCheck,
-  Zap,
 } from "lucide-react";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { SuggestedQuestions } from "@/components/chat/SuggestedQuestions";
 import { Sidebar } from "@/components/Sidebar";
+import { ChatInput } from "@/components/chat/ChatInput";
 import { useChat } from "@/hooks/useChat";
 import { cn } from "@/lib/utils";
-import { ChatInput } from "@/components/chat/ChatInput";
 
 function EmptyState({ onSelect }: { onSelect: (q: string) => void }) {
   return (
-    <div className="h-full flex flex-col items-center justify-center p-4 md:p-8">
-      {/* Logo with glow */}
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      {/* Hero Section */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.5 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="relative mb-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className="flex flex-col items-center text-center mb-10 md:mb-14"
       >
-        <div className="absolute inset-0 bg-gradient-primary rounded-3xl blur-3xl opacity-30 animate-pulse-slow" />
-        <div className="relative w-20 h-20 rounded-3xl bg-gradient-primary flex items-center justify-center text-white font-bold text-3xl shadow-2xl shadow-primary/30">
-          F
-        </div>
+        {/* Logo */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-400 border-2 border-surface rounded-full"
-        />
-      </motion.div>
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="w-16 h-16 md:w-20 md:h-20 rounded-lg bg-accent flex items-center justify-center text-bg font-bold text-2xl md:text-3xl shadow-lg mb-6"
+        >
+          F
+        </motion.div>
 
-      {/* Title */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-        className="text-center mb-2"
-      >
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2 tracking-tight">
-          Your intelligent banking assistant
+        {/* Title */}
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-heading font-semibold text-text tracking-tight mb-3">
+          Welcome to FinBot BD
         </h1>
-        <p className="text-sm text-muted-foreground max-w-lg mx-auto leading-relaxed">
-          Ask me anything about <span className="text-pink-400 font-medium">bKash</span>,{" "}
-          <span className="text-orange-400 font-medium">Nagad</span>, or{" "}
-          <span className="text-blue-400 font-medium">DBBL</span>.
+
+        {/* Description */}
+        <p className="text-sm md:text-base text-text-secondary max-w-lg leading-relaxed mb-4">
+          Your AI banking assistant for Bangladesh.
           <br />
-          I understand Bengali, English, and Banglish.
+          Get instant answers about banking services, cards, PIN reset,
+          accounts, transfers, and more.
         </p>
-      </motion.div>
 
-      {/* Feature badges */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
-        className="flex flex-wrap items-center justify-center gap-2 mb-8 mt-4"
-      >
-        {[
-          { icon: Zap, label: "Instant answers", color: "text-emerald-400" },
-          { icon: ShieldCheck, label: "RAG powered", color: "text-cyan-400" },
-          { icon: TrendingUp, label: "Bangla support", color: "text-violet-400" },
-        ].map((feature) => (
-          <div
-            key={feature.label}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/5 text-xs text-muted-foreground"
-          >
-            <feature.icon className={cn("w-3.5 h-3.5", feature.color)} />
-            {feature.label}
-          </div>
-        ))}
-      </motion.div>
-
-      {/* Suggested questions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
-        className="w-full max-w-lg"
-      >
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Try asking
-          </h3>
+        {/* Multilingual Badge */}
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card border border-accent/15">
+          <span className="text-xs font-medium text-text-secondary">
+            Supports English &middot; বাংলা &middot; Banglish
+          </span>
         </div>
+      </motion.div>
+
+      {/* Chat Input — primary CTA */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15, duration: 0.3, ease: "easeOut" }}
+        className="max-w-2xl mx-auto mb-10 md:mb-14"
+      >
+        <ChatInput onSend={onSelect} loading={false} />
+      </motion.div>
+
+      {/* Separator — full width, centered */}
+      <div className="w-full flex items-center gap-4 mb-10 md:mb-14">
+        <div className="flex-1 h-px bg-divider" />
+        <span className="text-xs text-text-muted font-medium uppercase tracking-widest shrink-0">or</span>
+        <div className="flex-1 h-px bg-divider" />
+      </div>
+
+      {/* Try Asking Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.3, ease: "easeOut" }}
+        className="pb-16 md:pb-24"
+      >
+        <div className="text-center mb-8 md:mb-10">
+          <h3 className="text-sm font-heading font-semibold text-text tracking-tight">
+            Try Asking
+          </h3>
+          <p className="text-xs text-text-secondary mt-1.5">
+            Choose an example below to get started.
+          </p>
+        </div>
+
         <SuggestedQuestions onSelect={onSelect} />
       </motion.div>
-
-      {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-surface pointer-events-none" />
     </div>
   );
 }
 
-// Mobile Header
 function MobileHeader({
   onMenuClick,
   sidebarOpen,
@@ -113,24 +101,21 @@ function MobileHeader({
   sidebarOpen: boolean;
 }) {
   return (
-    <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-surface/80 backdrop-blur-2xl">
+    <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-divider bg-bg/80 backdrop-blur-md">
       <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
         onClick={onMenuClick}
-        className="h-9 w-9 rounded-xl flex items-center justify-center bg-white/5 border border-border text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all duration-200"
+        className="h-9 w-9 rounded-md flex items-center justify-center bg-card border border-border text-text-secondary hover:text-text transition-all duration-200"
       >
         {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
       </motion.button>
 
       <div className="flex items-center gap-2.5">
-        <div className="relative">
-          <div className="w-7 h-7 rounded-lg bg-gradient-primary flex items-center justify-center text-white font-bold text-xs">
-            F
-          </div>
-          <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 border-2 border-surface rounded-full" />
+        <div className="w-7 h-7 rounded bg-accent flex items-center justify-center text-bg font-bold text-xs">
+          F
         </div>
-        <span className="text-sm font-semibold text-foreground">FinBot BD</span>
+        <span className="text-sm font-medium text-text">FinBot BD</span>
       </div>
 
       <div className="w-9" />
@@ -151,8 +136,8 @@ export default function Home() {
   );
 
   return (
-    <main className="flex h-screen overflow-hidden bg-background">
-      {/* Desktop Sidebar */}
+    <main className="flex h-screen overflow-hidden bg-bg">
+      {/* Desktop Sidebar — fixed 280px */}
       <div className="hidden md:block shrink-0">
         <Sidebar />
       </div>
@@ -165,15 +150,15 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.15 }}
               onClick={() => setSidebarOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+              className="fixed inset-0 bg-overlay/60 backdrop-blur-sm z-40 md:hidden"
             />
             <motion.div
               initial={{ x: -300, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -300, opacity: 0 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className="fixed left-0 top-0 h-full z-50 md:hidden"
             >
               <Sidebar onClose={() => setSidebarOpen(false)} />
@@ -184,15 +169,15 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Grid background */}
-        <div className="absolute inset-0 bg-grid pointer-events-none opacity-30" />
-
-        {/* Glow orbs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-[100px]" />
-          <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-accent/5 rounded-full blur-[100px]" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/[0.02] rounded-full blur-[150px]" />
-        </div>
+        {/* Subtle grid background */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.015]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(240,234,224,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(240,234,224,0.3) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
 
         {/* Mobile Header */}
         <MobileHeader
@@ -200,11 +185,21 @@ export default function Home() {
           sidebarOpen={sidebarOpen}
         />
 
-        {/* Content */}
+        {/* Content Area */}
         <div className="flex-1 relative z-10 min-h-0">
           {!hasMessages ? (
-            <EmptyState onSelect={handleSuggestion} />
+            /* ─────────────────────────────────────────────
+               WELCOME LAYOUT
+               Natural height, scrollable, generous spacing
+               ───────────────────────────────────────────── */
+            <div className="h-full overflow-y-auto scrollbar-hide">
+              <EmptyState onSelect={handleSuggestion} />
+            </div>
           ) : (
+            /* ─────────────────────────────────────────────
+               CONVERSATION LAYOUT
+               Fixed header + scrollable messages + fixed input
+               ───────────────────────────────────────────── */
             <ChatWindow
               messages={messages}
               loading={loading}
@@ -214,17 +209,7 @@ export default function Home() {
             />
           )}
         </div>
-
-        {/* If empty state, show a sticky input at the bottom */}
-        {!hasMessages && (
-          <div className="relative z-10 pb-4 px-4">
-            <div className="max-w-lg mx-auto">
-              <ChatInput onSend={handleSuggestion} loading={loading} />
-            </div>
-          </div>
-        )}
       </div>
     </main>
   );
 }
-

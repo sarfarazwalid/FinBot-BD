@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trash2,
@@ -9,6 +9,7 @@ import {
 import { Message } from "@/types";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
+import { cn } from "@/lib/utils";
 
 interface ChatWindowProps {
   messages: Message[];
@@ -18,40 +19,81 @@ interface ChatWindowProps {
   onClear: () => void;
 }
 
+const STATUS_STAGES = [
+  "Detecting language...",
+  "Identifying banking service...",
+  "Searching knowledge base...",
+  "Ranking relevant information...",
+  "Generating response...",
+];
+
+function Dot({ delay }: { delay: number }) {
+  return (
+    <motion.span
+      className="block w-2 h-2 rounded-full"
+      style={{ backgroundColor: "#B87333" }}
+      animate={{
+        opacity: [0.45, 1, 0.45],
+        scale: [1, 1.15, 1],
+      }}
+      transition={{
+        duration: 1.4,
+        repeat: Infinity,
+        delay,
+        ease: "easeInOut",
+      }}
+    />
+  );
+}
+
 function TypingIndicator() {
+  const [statusIndex, setStatusIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStatusIndex((prev) => (prev + 1) % STATUS_STAGES.length);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      className="flex gap-3"
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="flex gap-3 items-start"
     >
-      <div className="relative shrink-0 mt-0.5">
-        <div className="w-8 h-8 rounded-xl bg-gradient-primary flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-primary/20">
+      {/* Bot Avatar */}
+      <div className="shrink-0 mt-0.5">
+        <div className="w-8 h-8 rounded-md bg-accent flex items-center justify-center text-bg font-bold text-sm">
           F
         </div>
-        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-surface rounded-full" />
       </div>
-      <div className="glass-strong rounded-2xl rounded-tl-md px-4 py-3 min-w-[80px]">
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            <motion.span
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-              className="w-2 h-2 bg-primary rounded-full"
-            />
-            <motion.span
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }}
-              className="w-2 h-2 bg-primary rounded-full"
-            />
-            <motion.span
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }}
-              className="w-2 h-2 bg-primary rounded-full"
-            />
+
+      {/* Thinking bubble */}
+      <div className="bg-surface border border-border rounded-lg rounded-tl-sm px-4 py-3 min-w-[160px]">
+        <div className="flex items-center gap-3">
+          {/* Three copper dots */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Dot delay={0} />
+            <Dot delay={0.2} />
+            <Dot delay={0.4} />
           </div>
-          <span className="text-2xs text-muted-foreground">Thinking...</span>
+
+          {/* Dynamic status */}  
+          <AnimatePresence mode="popLayout">
+            <motion.span
+              key={statusIndex}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="text-xs text-text-secondary font-medium whitespace-nowrap"
+            >
+              {STATUS_STAGES[statusIndex]}
+            </motion.span>
+          </AnimatePresence>
         </div>
       </div>
     </motion.div>
@@ -64,12 +106,12 @@ function ErrorBanner({ error }: { error: string }) {
       initial={{ opacity: 0, y: -8, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8, scale: 0.95 }}
-      className="flex items-start gap-3 px-4 py-3 rounded-xl bg-rose/10 border border-rose/20"
+      className="flex items-start gap-3 px-4 py-3 rounded-lg bg-danger/10 border border-danger/20"
     >
-      <div className="w-2 h-2 rounded-full bg-rose mt-1.5 shrink-0" />
+      <div className="w-2 h-2 rounded-full bg-danger mt-1.5 shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-rose-300">Error</p>
-        <p className="text-xs text-rose-200/70 mt-0.5">{error}</p>
+        <p className="text-sm font-medium text-danger">Error</p>
+        <p className="text-xs text-danger/80 mt-0.5">{error}</p>
       </div>
     </motion.div>
   );
@@ -78,13 +120,13 @@ function ErrorBanner({ error }: { error: string }) {
 function ScrollToBottom({ onClick }: { onClick: () => void }) {
   return (
     <motion.button
-      initial={{ opacity: 0, scale: 0.8 }}
+      initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.8 }}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="absolute bottom-4 left-1/2 -translate-x-1/2 h-8 px-3 rounded-xl bg-surface-elevated/90 backdrop-blur-xl border border-border text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs shadow-lg transition-all duration-200"
+      className="absolute bottom-4 left-1/2 -translate-x-1/2 h-8 px-3 rounded-lg bg-card/90 backdrop-blur-sm border border-border text-text-secondary hover:text-text flex items-center gap-1.5 text-xs shadow-lg transition-all duration-200"
     >
       <ChevronDown className="w-3.5 h-3.5" />
       Scroll to bottom
@@ -129,34 +171,31 @@ export function ChatWindow({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-20 backdrop-blur-2xl bg-surface/60 border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3">
+      {/* Sticky Header — aligned with messages and input */}
+      <div className="sticky top-0 z-20 bg-bg/80 backdrop-blur-md border-b border-divider">
+        <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-primary/20">
-                F
-              </div>
-              <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-surface rounded-full" />
+            <div className="w-9 h-9 rounded-md bg-accent flex items-center justify-center text-bg font-bold text-sm">
+              F
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-foreground">FinBot BD</h2>
+              <h2 className="text-sm font-medium text-text">FinBot BD</h2>
               <div className="flex items-center gap-1.5">
                 <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success" />
                 </span>
-                <span className="text-2xs text-emerald-400">Online</span>
+                <span className="text-2xs text-text-secondary">Online</span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-1">
             {messages.length > 0 && (
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={onClear}
-                className="h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all duration-200 flex items-center gap-1.5"
+                className="h-8 px-3 rounded-md text-xs font-medium text-text-secondary hover:text-text hover:bg-white/[0.03] transition-all duration-200 flex items-center gap-1.5"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Clear
@@ -166,12 +205,12 @@ export function ChatWindow({
         </div>
       </div>
 
-      {/* Messages */}
+      {/* Messages — fluid layout with comfortable padding */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto scroll-area relative"
+        className="flex-1 overflow-y-auto scrollbar-hide relative"
       >
-        <div className="px-4 py-4 space-y-5 max-w-3xl mx-auto">
+        <div className="px-4 sm:px-6 lg:px-8 py-4 space-y-5">
           <AnimatePresence mode="popLayout">
             {messages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
@@ -187,7 +226,6 @@ export function ChatWindow({
           <div ref={bottomRef} />
         </div>
 
-        {/* Scroll to bottom button */}
         <AnimatePresence>
           {showScrollBtn && (
             <ScrollToBottom onClick={scrollToBottom} />
@@ -195,11 +233,9 @@ export function ChatWindow({
         </AnimatePresence>
       </div>
 
-      {/* Sticky Input Area */}
-      <div className="sticky bottom-0 z-20 bg-gradient-surface pt-2 pb-3 px-4">
-        <div className="max-w-3xl mx-auto">
-          <ChatInput onSend={onSend} loading={loading} />
-        </div>
+      {/* Sticky Input — fluid, aligned with messages */}
+      <div className="sticky bottom-0 z-20 bg-gradient-to-t from-bg via-bg/95 to-transparent pt-6 pb-3 px-4 sm:px-6 lg:px-8">
+        <ChatInput onSend={onSend} loading={loading} />
       </div>
     </div>
   );
