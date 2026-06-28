@@ -153,102 +153,54 @@ Generated Response
 
 ---
 
-# Project Structure
+## 📁 Project Structure
 
-FinBot BD/
-├── .gitignore
-├── package-lock.json
-├── package.json
-├── README.md
-├── backend/
-│   ├── .gitignore
-│   ├── README.md
-│   ├── requirements.txt
-│   ├── run_server.ps1
+```
+FinBot/
+├── backend/                     # FastAPI backend
 │   ├── app/
-│   │   ├── __init__.py
-│   │   ├── ambiguity.py
-│   │   ├── intent_state.py
-│   │   ├── main.py
-│   │   ├── ood.py
-│   │   ├── api/
-│   │   │   ├── __init__.py
-│   │   │   └── routes.py
-│   │   ├── core/
-│   │   │   ├── __init__.py
-│   │   │   ├── config.py
-│   │   │   └── version.py
-│   │   ├── embeddings/
-│   │   │   ├── __init__.py
-│   │   │   └── index_pipeline.py
-│   │   ├── evaluation/
-│   │   │   ├── __init__.py
-│   │   │   ├── metrics.py
-│   │   │   ├── ragas_eval.py
-│   │   │   └── README.md
-│   │   ├── ingestion/
-│   │   │   ├── __init__.py
-│   │   │   ├── chunker.py
-│   │   │   ├── cleaner.py
-│   │   │   ├── loader.py
-│   │   │   ├── pipeline.py
-│   │   │   ├── schemas.py
-│   │   │   └── validator.py
-│   │   ├── llm/
-│   │   │   ├── __init__.py
-│   │   │   ├── generator.py
-│   │   │   └── prompt_builder.py
-│   │   └── retrieval/
-│   │       ├── __init__.py
-│   │       ├── bm25.py
-│   │       ├── hybrid_search.py
-│   │       ├── intent_detector.py
-│   │       ├── query_rewriter.py
-│   │       ├── rrf.py
+│   │   ├── api/                 # REST API endpoints
+│   │   ├── core/                # Configuration & application settings
+│   │   ├── embeddings/          # Embedding indexing pipeline
+│   │   ├── evaluation/          # RAG evaluation & metrics
+│   │   ├── ingestion/           # Data loading, cleaning & chunking
+│   │   ├── llm/                 # Prompt engineering & LLM generation
+│   │   ├── retrieval/           # Hybrid RAG retrieval pipeline
+│   │   │   ├── bm25.py
+│   │   │   ├── hybrid_search.py
+│   │   │   ├── intent_detector.py
+│   │   │   ├── query_rewriter.py
+│   │   │   ├── rrf.py
+│   │   │   └── vector_store.py
+│   │   ├── ambiguity.py         # Ambiguous query detection
+│   │   ├── intent_state.py      # Intent tracking
+│   │   ├── ood.py               # Out-of-domain detection
+│   │   └── main.py              # FastAPI entry point
+│   ├── data/                    # Banking knowledge base
+│   ├── scripts/                 # Utility scripts
+│   ├── tests/                   # Backend test suite
+│   └── requirements.txt
+│
+├── frontend/                    # Next.js frontend
+│   ├── src/
+│   │   ├── app/                 # App Router pages
+│   │   ├── components/          # Reusable UI components
+│   │   │   ├── chat/
+│   │   │   └── ui/
+│   │   ├── hooks/               # React hooks & conversation state
+│   │   ├── lib/                 # API client, storage & utilities
+│   │   ├── types/               # Shared TypeScript types
+│   │   └── __tests__/           # Frontend test setup
+│   ├── package.json
+│   └── tailwind.config.ts
+│
+├── brand/                       # Brand assets (logos, icons, design files)
+│
+├── README.md
+├── package.json                 # Root workspace scripts
+└── .gitignore
+```
 
-
-│   │       └── vector_store.py
-│   ├── data/
-│   ├── scripts/
-│   └── tests/
-│       └── test_rag_pipeline.py
-├── brand/
-└── frontend/
-    ├── jest.config.js
-    ├── next-env.d.ts
-    ├── next.config.js
-    ├── package-lock.json
-    ├── package.json
-    ├── postcss.config.js
-    ├── README.md
-    ├── run_dev.ps1
-    ├── tailwind.config.ts
-    ├── tsconfig.json
-    ├── tsconfig.tsbuildinfo
-    └── src/
-        ├── __tests__/
-        │   └── setup.ts
-        ├── app/
-        │   ├── globals.css
-        │   ├── layout.tsx
-        │   └── page.tsx
-        ├── components/
-        │   ├── Sidebar.tsx
-        │   ├── chat/
-        │   └── ui/
-        ├── hooks/
-        │   ├── conversation.types.ts
-        │   ├── useChat.ts
-        │   └── useConversations.ts
-        ├── lib/
-        │   ├── api.ts
-        │   ├── colors.ts
-        │   ├── storage.ts
-        │   └── utils.ts
-        └── types/
-            └── index.ts
-
----
 
 # Installation
 
