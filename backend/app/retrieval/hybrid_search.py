@@ -17,6 +17,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from app.retrieval.bm25 import bm25_search
+from app.retrieval.intent_detector import detect_intent, get_intent_anti_topics, get_intent_related_topics
 from app.retrieval.query_rewriter import rewrite_query
 from app.retrieval.rrf import fuse_results
 from app.retrieval.vector_store import semantic_search
@@ -78,7 +79,17 @@ def _filter_and_rerank(
     top_k: int,
     query: str = "",
 ) -> List[Dict[str, Any]]:
-    """Filter results by bank preference, topic relevance, and remove duplicates."""
+    """Filter results by bank preference, intent relevance, and remove duplicates."""
+    # 1. Detect intent
+    intent, intent_confidence = detect_intent(query)
+    related_topics = get_intent_related_topics(intent)
+    anti_topics = get_intent_anti_topics(intent)
+
+    logger.info(
+        "Intent: %s (confidence=%.2f) | related_topics=%s | anti_topics=%s",
+        intent, intent_confidence, related_topics, anti_topics,
+    )
+
     if target_source:
         results = _exclude_other_banks(results, target_source)
 
@@ -93,17 +104,32 @@ def _filter_and_rerank(
             len(other),
         )
 
-    if query:
-        query_words = set(query.lower().split())
-        stop_words = {"how", "to", "reset", "my", "the", "a", "an", "is", "i", "?", "?"}
-        query_keywords = query_words - stop_words
-        if query_keywords:
-            def topic_score(chunk: Dict[str, Any]) -> int:
-                chunk_text = (chunk.get("text") or "").lower()
-                return sum(1 for kw in query_keywords if kw in chunk_text)
+    # 2. Intent-based topic scoring
+    if query and related_topics:
+        def intent_score(chunk: Dict[str, Any]) -> float:
+            chunk_text = (chunk.get("text") or "").lower()
+            chunk_source = (chunk.get("source") or "").lower()
 
-            results = sorted(results, key=topic_score, reverse=True)
-            logger.info("Topic boost applied: keywords=%s", sorted(query_keywords))
+            # Check if chunk topic matches related topics
+            topic_match = any(topic in chunk_text or topic in chunk_source for topic in related_topics)
+
+            # Check if chunk contains anti-topics
+            anti_match = any(anti in chunk_text for anti in anti_topics)
+
+            # Base score from chunk score field
+            base_score = float(chunk.get("score", 0.0) or 0.0)
+
+            if topic_match and not anti_match:
+                return base_score + 2.0  # Strong boost
+            elif topic_match:
+                return base_score + 1.0  # Moderate boost
+            elif anti_match:
+                return base_score - 1.0  # Penalty
+            else:
+                return base_score
+
+        results = sorted(results, key=intent_score, reverse=True)
+        logger.info("Intent-based rerank applied (intent=%s)", intent)
 
     deduped: List[Dict[str, Any]] = []
     seen_fingerprints: set[int] = set()
@@ -161,13 +187,27 @@ def search(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
     timings["rrf"] = (time.perf_counter() - t1) * 1000
     logger.info("Timing rrf: %.1f ms", timings["rrf"])
 
-    # 5. Bank-aware filter + topic boost + dedup
+    # 5. Intent-aware filter + rerank + dedup
     t1 = time.perf_counter()
     filtered = _filter_and_rerank(
         fused, target_source, top_k=top_k, query=query
     )
     timings["filter"] = (time.perf_counter() - t1) * 1000
     logger.info("Timing filter: %.1f ms", timings["filter"])
+
+    # 6. Log final intent and chunk topics for audit
+    intent, intent_confidence = detect_intent(query)
+    logger.info(
+        "[AUDIT] query=%r | intent=%s (conf=%.2f) | final_chunks=%d",
+        query[:80], intent, intent_confidence, len(filtered),
+    )
+    for i, chunk in enumerate(filtered, 1):
+        logger.info(
+            "[AUDIT] chunk[%d] source=%s | topic_keywords=%s",
+            i,
+            chunk.get("source"),
+            _get_chunk_topics(chunk),
+        )
 
     total_ms = (time.perf_counter() - t0) * 1000
     logger.info(
@@ -181,3 +221,27 @@ def search(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
     )
 
     return filtered
+
+
+def _get_chunk_topics(chunk: Dict[str, Any]) -> List[str]:
+    """Extract topic indicators from a chunk for audit logging."""
+    text = (chunk.get("text") or "").lower()
+    topics = []
+    topic_indicators = {
+        "send money": "send_money",
+        "cash in": "cash_in",
+        "cash out": "cash_out",
+        "recharge": "mobile_recharge",
+        "payment": "payment",
+        "bank transfer": "bank_transfer",
+        "pin": "pin_reset",
+        "balance": "check_balance",
+        "statement": "mini_statement",
+        "loan": "loan",
+        "account": "account_opening",
+        "fd": "fd_creation",
+    }
+    for indicator, topic in topic_indicators.items():
+        if indicator in text:
+            topics.append(topic)
+    return topics

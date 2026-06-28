@@ -17,4 +17,8 @@ export interface Conversation {
   bank?: string;
   pinned?: boolean;
   archived?: boolean;
+  /** Per-conversation flag: true while this conversation is awaiting an API response */
+  isGenerating?: boolean;
+  /** Unique ID of the last request sent from this conversation. Used to ignore stale responses. */
+  pendingRequestId?: string;
 }

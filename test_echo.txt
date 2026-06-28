@@ -1,1 +1,0 @@
-with open(r'c:\\path\\file.txt', 'r', encoding='utf-8') as f: c = f.read()

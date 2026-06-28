@@ -11,6 +11,8 @@ export interface Conversation {
   pinned?: boolean;
   archived?: boolean;
   preview?: string;
+  isGenerating?: boolean;
+  pendingRequestId?: string;
 }
 
 export interface Message {

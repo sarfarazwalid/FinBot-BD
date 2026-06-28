@@ -124,7 +124,7 @@ function MobileHeader({
 }
 
 export default function Home() {
-  const { messages, loading, error, send, clearChat, goHome, activeId, activeConversation, createConversation, setActiveConversation, conversations } = useChat();
+  const { messages, loading, error, send, clearChat, goHome, activeId, activeConversation, createConversation, setActiveConversation, conversations, deleteConversation } = useChat();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const hasMessages = messages.length > 0;
   const inConversation = activeId !== null;
@@ -140,7 +140,7 @@ export default function Home() {
     <main className="flex h-screen overflow-hidden bg-bg">
       {/* Desktop Sidebar — fixed 280px */}
       <div className="hidden md:block shrink-0">
-        <Sidebar onLogoClick={goHome} onNewConversation={createConversation} onSelectConversation={setActiveConversation} conversations={conversations} activeId={activeId} />
+        <Sidebar onLogoClick={goHome} onNewConversation={createConversation} onSelectConversation={setActiveConversation} onDeleteConversation={deleteConversation} conversations={conversations} activeId={activeId} />
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -162,7 +162,7 @@ export default function Home() {
               transition={{ duration: 0.2, ease: "easeOut" }}
               className="fixed left-0 top-0 h-full z-50 md:hidden"
             >
-              <Sidebar onLogoClick={goHome} onNewConversation={createConversation} onSelectConversation={setActiveConversation} conversations={conversations} activeId={activeId} />
+              <Sidebar onLogoClick={goHome} onNewConversation={createConversation} onSelectConversation={setActiveConversation} onDeleteConversation={deleteConversation} conversations={conversations} activeId={activeId} />
             </motion.div>
           </>
         )}

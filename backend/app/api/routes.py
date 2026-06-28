@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from app.llm.generator import generate_answer
 from app.retrieval.hybrid_search import search as hybrid_search
 from app.ambiguity import is_ambiguous_banking_query, get_clarification_message, get_clarification_options
+from app.ood import is_in_domain, get_ood_response
 from app.llm.prompt_builder import detect_query_language
 from app.intent_state import get_pending_intent, store_pending_intent, is_bank_name, reconstruct_query
 
@@ -127,7 +128,19 @@ async def chat(req: ChatRequest, request: Request) -> ChatResponse:
             clarification_options=None,
         )
 
-    # Step 2: Check for ambiguous banking queries
+    # Step 2: Out-of-domain detection
+    if not is_in_domain(req.message):
+        ood_answer, ood_lang = get_ood_response(req.message)
+        logger.info("[OOD] query=%s language=%s", req.message, ood_lang)
+        return ChatResponse(
+            answer=ood_answer,
+            sources=[],
+            confidence=1.0,
+            clarification_required=None,
+            clarification_options=None,
+        )
+
+    # Step 3: Check for ambiguous banking queries
     is_ambiguous, intent = is_ambiguous_banking_query(req.message)
     if is_ambiguous and intent:
         language = detect_query_language(req.message)
@@ -149,10 +162,10 @@ async def chat(req: ChatRequest, request: Request) -> ChatResponse:
             clarification_options=options,
         )
 
-    # Step 3: Retrieve context
+    # Step 5: Retrieve context
     retrieved: List[Dict[str, Any]] = hybrid_search(req.message, top_k=5)
 
-    # Step 4: Generate answer
+    # Step 6: Generate answer
     result = generate_answer(req.message, retrieved)
 
     return ChatResponse(

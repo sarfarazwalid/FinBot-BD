@@ -5,11 +5,13 @@ from __future__ import annotations
 import logging
 import re
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 from app.core.config import Settings
 from app.ingestion.cleaner import sanitize_context
 from app.llm.prompt_builder import build_prompt, detect_query_language
+from app.retrieval.hybrid_search import _text_fingerprint
+from app.retrieval.intent_detector import detect_intent, get_intent_anti_topics, get_intent_related_topics
 
 logger = logging.getLogger(__name__)
 
@@ -59,14 +61,6 @@ def _filter_chunks_by_language(
             filtered.append(chunk)
     logger.info("Language filter (banglish): kept %d/%d chunks", len(filtered), len(chunks))
     return filtered if filtered else chunks
-
-
-def _text_fingerprint(text: str) -> int:
-    words = text.split()
-    if len(words) < 6:
-        return hash(text[:100])
-    trigrams = frozenset(tuple(words[i : i + 3]) for i in range(len(words) - 2))
-    return hash(trigrams)
 
 
 def _compress_context(chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -195,6 +189,50 @@ def _build_fallback_answer(
     return {"answer": fallback_answer, "sources": sources, "confidence": confidence}
 
 
+def _filter_chunks_by_intent(
+    chunks: List[Dict[str, Any]],
+    intent: str,
+    related_topics: Set[str],
+    anti_topics: Set[str],
+) -> List[Dict[str, Any]]:
+    """Filter chunks to keep only those relevant to the detected intent."""
+    if not related_topics and not anti_topics:
+        return chunks
+
+    filtered: List[Dict[str, Any]] = []
+    for chunk in chunks:
+        chunk_text = (chunk.get("text") or "").lower()
+        chunk_source = (chunk.get("source") or "").lower()
+
+        # For general intent or if no related topics, pass all through
+        if intent == "general" or not related_topics:
+            filtered.append(chunk)
+            continue
+
+        # Check for anti-topic match — exclude
+        anti_match = any(anti in chunk_text for anti in anti_topics)
+        if anti_match:
+            logger.info("  [INTENT_FILTER] Dropping chunk (anti-topic match: %s)", anti_match)
+            continue
+
+        # Check for related topic match — include
+        topic_match = any(topic in chunk_text or topic in chunk_source for topic in related_topics)
+        if topic_match:
+            filtered.append(chunk)
+            continue
+
+        # No match but also no anti-match: include if score is decent
+        score = float(chunk.get("score", 0.0) or 0.0)
+        if score >= 0.5:
+            filtered.append(chunk)
+
+    logger.info(
+        "Intent filter: kept %d/%d chunks for intent=%s",
+        len(filtered), len(chunks), intent,
+    )
+    return filtered if filtered else chunks[:3]  # Fallback: keep top 3
+
+
 def _estimate_tokens(text: str) -> int:
     return max(1, len(text) // 4)
 
@@ -240,8 +278,22 @@ def generate_answer(
     compressed_chunks = _compress_context(filtered_chunks)
     timings["compress"] = (time.perf_counter() - t0) * 1000
 
+    # NEW: Filter chunks by detected intent to avoid mixing workflows
     t0 = time.perf_counter()
-    prompt_payload = build_prompt(query, compressed_chunks)
+    intent, intent_confidence = detect_intent(query)
+    related_topics = get_intent_related_topics(intent)
+    anti_topics = get_intent_anti_topics(intent)
+    intent_filtered_chunks = _filter_chunks_by_intent(
+        compressed_chunks, intent, related_topics, anti_topics
+    )
+    timings["intent_filter"] = (time.perf_counter() - t0) * 1000
+    logger.info(
+        "Intent filter: intent=%s confidence=%.2f | kept %d/%d chunks",
+        intent, intent_confidence, len(intent_filtered_chunks), len(compressed_chunks),
+    )
+
+    t0 = time.perf_counter()
+    prompt_payload = build_prompt(query, intent_filtered_chunks)
     timings["prompt"] = (time.perf_counter() - t0) * 1000
 
     prompt_text = prompt_payload["user"]
@@ -253,7 +305,7 @@ def generate_answer(
     logger.info("  System (first 300 chars): %s", prompt_payload["system"][:300])
     logger.info("  User prompt (first 500 chars): %s", prompt_payload["user"][:500])
 
-    sources = list({chunk.get("source", "unknown") for chunk in compressed_chunks})
+    sources = list({chunk.get("source", "unknown") for chunk in intent_filtered_chunks})
     settings = Settings()
     model_name = model or settings.openrouter_model
     logger.info("[LLM] model=%s", model_name)

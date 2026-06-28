@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { storage, generateConversationTitle, STORAGE_KEY, ACTIVE_KEY } from "@/lib/storage";
 import { Conversation, Message } from "./conversation.types";
 
@@ -22,48 +22,54 @@ export function useConversations() {
     return conversations.find((c) => c.id === activeId) || null;
   }, [conversations, activeId]);
 
-  const createConversation = useCallback((): Conversation => {
-    const newConv: Conversation = {
-      id: crypto.randomUUID(),
-      title: "New Conversation",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      messages: [],
-      language: "en",
-      bank: undefined,
-    };
+  const createConversation = useCallback(
+    (initialGenerating?: { requestId: string; userMessage: Message }): Conversation => {
+      const newConv: Conversation = {
+        id: crypto.randomUUID(),
+        title: "New Conversation",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        messages: initialGenerating ? [initialGenerating.userMessage] : [],
+        language: "en",
+        bank: undefined,
+        isGenerating: initialGenerating ? true : undefined,
+        pendingRequestId: initialGenerating ? initialGenerating.requestId : undefined,
+      };
 
-    // Read fresh from storage to avoid stale closure issues
-    let latestConversations: Conversation[] = [];
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      latestConversations = stored ? JSON.parse(stored) : [];
-    } catch {
-      latestConversations = [];
-    }
+      // Read fresh from storage to avoid stale closure issues
+      let latestConversations: Conversation[] = [];
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        latestConversations = stored ? JSON.parse(stored) : [];
+      } catch {
+        latestConversations = [];
+      }
 
-    // Atomically remove empty active conversation (if any)
-    const filtered = latestConversations.filter(
-      (c) => c.id !== activeId || c.messages.length > 0
-    );
-    const next = [newConv, ...filtered];
+      // Atomically remove empty active conversation (if any)
+      const filtered = latestConversations.filter(
+        (c) => c.id !== activeId || c.messages.length > 0
+      );
+      const next = [newConv, ...filtered];
 
-    setConversations(next);
-    setActiveId(newConv.id);
+      // Use a function updater for reliability with React 18 batching
+      setConversations(() => next);
+      setActiveId(newConv.id);
 
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Storage full
-    }
-    localStorage.setItem(ACTIVE_KEY, newConv.id);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // Storage full
+      }
+      localStorage.setItem(ACTIVE_KEY, newConv.id);
 
-    if (activeId) {
-      storage.clearDraft(activeId);
-    }
+      if (activeId) {
+        storage.clearDraft(activeId);
+      }
 
-    return newConv;
-  }, [activeId]);
+      return newConv;
+    },
+    [activeId]
+  );
 
   const deleteConversation = useCallback((id: string) => {
     setConversations((prev) => {
@@ -166,6 +172,29 @@ export function useConversations() {
     updateConversation(id, { archived: false });
   }, [updateConversation]);
 
+  const setConversationGenerating = useCallback(
+    (id: string, requestId: string, isGenerating: boolean) => {
+      setConversations((prev) => {
+        const updated = prev.map((c) => {
+          if (c.id !== id) return c;
+          return {
+            ...c,
+            isGenerating,
+            pendingRequestId: isGenerating ? requestId : undefined,
+            updatedAt: Date.now(),
+          };
+        });
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        } catch {
+          // Storage full
+        }
+        return updated;
+      });
+    },
+    []
+  );
+
   return {
     conversations,
     activeId,
@@ -181,5 +210,6 @@ export function useConversations() {
     unpinConversation,
     archiveConversation,
     unarchiveConversation,
+    setConversationGenerating,
   };
 }

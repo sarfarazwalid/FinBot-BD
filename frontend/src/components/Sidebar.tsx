@@ -40,14 +40,15 @@ function timeAgo(timestamp: number): string {
   });
 }
 
-export function Sidebar({ onLogoClick, onNewConversation, onSelectConversation, conversations: externalConversations, activeId: externalActiveId }: { onLogoClick?: () => void; onNewConversation?: () => void; onSelectConversation?: (id: string) => void; conversations?: Conversation[]; activeId?: string | null }) {
+export function Sidebar({ onLogoClick, onNewConversation, onSelectConversation, onDeleteConversation, conversations: externalConversations, activeId: externalActiveId }: { onLogoClick?: () => void; onNewConversation?: () => void; onSelectConversation?: (id: string) => void; onDeleteConversation?: (id: string) => void; conversations?: Conversation[]; activeId?: string | null }) {
   const [expandedSection, setExpandedSection] = useState<string | null>("recent");
   const [searchQuery, setSearchQuery] = useState("");
 
   const hookData = useConversations();
   const conversations = externalConversations ?? hookData.conversations;
   const activeId = externalActiveId ?? hookData.activeId;
-  const { createConversation, setActiveConversation, clearActiveConversation, deleteConversation } = hookData;
+  const { createConversation, setActiveConversation, clearActiveConversation, deleteConversation: hookDelete } = hookData;
+  const deleteConversation = onDeleteConversation ?? hookDelete;
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);
