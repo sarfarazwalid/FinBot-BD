@@ -9,17 +9,9 @@ settings = Settings()
 
 
 def _print_startup_report() -> None:
+    """Lightweight startup report with profiling-style INFO logs."""
     key_present = "YES" if settings.openrouter_api_key else "NO"
     fallback_mode = "ENABLED" if not settings.openrouter_api_key else "DISABLED"
-
-    # Authenticate Hugging Face and get status
-    hf_result = configure_huggingface_auth()
-    hf_auth = "Authenticated" if hf_result["authenticated"] else "Not Authenticated"
-    hf_user = hf_result["user"] if hf_result["user"] else "N/A"
-
-    # Check embedding cache status
-    embed_info = EmbeddingModel.get_info()
-    cache_status = "Found" if embed_info["cache_found"] else "Not Checked"
 
     print("=" * 48)
     print("FinBot BD Startup Report")
@@ -31,11 +23,11 @@ def _print_startup_report() -> None:
     print(f"OpenRouter Key Present:  {key_present}")
     print(f"Fallback Mode:           {fallback_mode}")
     print(f"")
-    print(f"HF Auth:                 {hf_auth}")
-    print(f"HF User:                 {hf_user}")
     print(f"Embedding Model:         {settings.embedding_model}")
-    print(f"Embedding Cache:         {cache_status}")
     print(f"Embedding Dimension:     {settings.embedding_dimension}")
+    print(f"Embedding Model Status:  deferred (lazy load on first request)")
+    print(f"Pinecone Status:         deferred (lazy connect on first request)")
+    print(f"HF Auth Status:          deferred (authenticate on first request)")
     print("=" * 48)
 
 

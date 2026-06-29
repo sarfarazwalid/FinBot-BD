@@ -17,7 +17,6 @@ import os
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from app.core.config import Settings
 
@@ -183,6 +182,9 @@ class EmbeddingModel:
             logger.info("[CACHE] Embedding model found in local cache")
         else:
             logger.info("[CACHE] Embedding model not in local cache, will download")
+
+        # Lazy import: only load SentenceTransformer when actually needed
+        from sentence_transformers import SentenceTransformer
 
         try:
             cls._model = SentenceTransformer(model_name)
