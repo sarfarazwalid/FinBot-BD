@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 _BANKING_PATTERN_RE = re.compile(
     r"\b(?:pin|account|balance|transfer|deposit|loan|card|bank|recharge|payment|"
-    r"taka|bdt|bkash|nagad|rocket|upay|dbbl|brac|agent|otp|ussd|statement|"
+    r"taka|bdt|bkash|nagad|dbbl|brac|agent|otp|ussd|statement|"
     r"limit|fee|charge|interest|emi|cheque|atm|pos|qr|visa|mastercard)\b",
     re.IGNORECASE,
 )

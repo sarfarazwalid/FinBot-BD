@@ -34,7 +34,7 @@ const prompts: PromptCard[] = [
   },
   {
     bank: "Nagad",
-    icon: CreditCard,
+    icon: Banknote,
     prompts: [
       { flag: "🇬🇧", text: "How do I reset my Nagad PIN?" },
       { flag: "🇧🇩", text: "আমি কীভাবে Nagad PIN রিসেট করব?" },

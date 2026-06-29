@@ -63,7 +63,7 @@ export function ChatInput({ onSend, loading, autoFocus }: ChatInputProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask about bKash, Nagad, DBBL, Rocket, Upay..."
+          placeholder="Ask about bKash, Nagad, DBBL..."
           disabled={loading}
           rows={1}
           className={cn(

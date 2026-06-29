@@ -131,7 +131,7 @@ export function generateConversationTitle(firstMessage: string): string {
   const text = firstMessage.trim();
   
   // Detect bank
-  const banks = ["bKash", "Nagad", "DBBL", "Rocket", "Upay"];
+  const banks = ["bKash", "Nagad", "DBBL"];
   let detectedBank = "";
   for (const bank of banks) {
     if (text.toLowerCase().includes(bank.toLowerCase())) {

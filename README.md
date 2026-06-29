@@ -139,13 +139,52 @@ Returns:
 │   │   ├── core/          # Config + version
 │   │   ├── ingestion/     # Loader, chunker, cleaner, pipeline
 │   │   ├── retrieval/     # BM25, vector store, hybrid search
+│   │   │   ├── intent_detector.py  # Fine-grained intent classification
+│   │   │   ├── hybrid_search.py    # BM25 + Pinecone + RRF fusion
+│   │   │   ├── bm25.py             # Keyword-based retrieval
+│   │   │   ├── vector_store.py     # Pinecone semantic search
+│   │   │   └── query_rewriter.py   # Domain-specific query rewriting
 │   │   ├── llm/           # Prompt builder + OpenRouter generator
+│   │   │   ├── prompt_builder.py   # System prompts + language handling
+│   │   │   └── generator.py        # OpenRouter API + fallback logic
 │   │   └── evaluation/    # Custom RAG metrics
 │   ├── data/raw/          # bKash/Nagad/DBBL FAQ text files
 │   ├── tests/             # Passing tests
+│   │   └── test_rag_pipeline.py    # Intent detection + chunk filtering tests
 │   └── requirements.txt   # Python dependencies
 ├── frontend/
 │   ├── src/app/           # Next.js App Router
 │   ├── src/components/    # Chat UI + Sidebar
+│   ├── src/hooks/         # React hooks (useChat, useConversations)
 │   └── package.json
 └── package.json           # Root workspace scripts
+```
+
+## Supported Banks
+
+- bKash
+- Nagad
+- Dutch-Bangla Bank (DBBL)
+
+## Features
+
+- **Intent-aware retrieval**: Detects fine-grained banking intents (send_money, cash_in, cash_out, pin_reset, etc.) and boosts relevant chunks while penalizing unrelated topics
+- **Single-topic answers**: Prevents mixing multiple banking workflows in one response
+- **Conversation isolation**: Each API request is permanently bound to its originating conversation; switching conversations never leaks responses or spinners
+- **AbortController cleanup**: Deleting a generating conversation cancels its in-flight request
+- **Stale response protection**: Rapid consecutive sends are safely handled with unique request IDs
+- **Natural Banglish generation**: Answers in Banglish (Latin script) with English banking terms
+- **Audit logging**: Intent detection and final chunk topics are logged for retrieval quality monitoring
+
+## Testing
+
+Backend tests:
+```bash
+cd backend
+python -m pytest tests/test_rag_pipeline.py -v
+```
+
+Frontend tests:
+```bash
+cd frontend
+npx jest

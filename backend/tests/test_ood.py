@@ -52,7 +52,7 @@ class TestInDomainStillPasses:
         assert is_in_domain("How to check balance in Nagad?")
 
     def test_send_money(self):
-        assert is_in_domain("How to send money using Rocket?")
+        assert is_in_domain("How to send money using bKash?")
 
     def test_loan_inquiry(self):
         assert is_in_domain("What is the interest rate for personal loan?")

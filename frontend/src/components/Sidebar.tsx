@@ -18,8 +18,6 @@ const bankColors: Record<string, string> = {
   bKash: "bg-pink-500/10 text-pink-400 border-pink-500/20",
   Nagad: "bg-orange-500/10 text-orange-400 border-orange-500/20",
   DBBL: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  Rocket: "bg-green-500/10 text-green-400 border-green-500/20",
-  Upay: "bg-amber-500/10 text-amber-400 border-amber-500/20",
 };
 
 function timeAgo(timestamp: number): string {

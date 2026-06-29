@@ -12,7 +12,7 @@ _lock = threading.Lock()
 _PENDING_INTENT_TTL = 5 * 60  # 5 minutes
 
 # Bank keywords that disambiguate
-_BANK_KEYWORDS = ["bkash", "nagad", "dbbl", "rocket", "upay"]
+_BANK_KEYWORDS = ["bkash", "nagad", "dbbl"]
 
 # Template for reconstructing queries from intent and bank
 _QUERY_TEMPLATES = {
