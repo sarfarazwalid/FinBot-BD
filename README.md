@@ -98,9 +98,8 @@ Responses are generated in the same language as the query.
 * Python
 * FastAPI
 * Pinecone
-* SentenceTransformers
-* Hugging Face
-* OpenRouter
+* Remote Embedding API (OpenAI `text-embedding-3-small` via OpenRouter)
+* OpenRouter (LLM generation)
 * BM25
 * Reciprocal Rank Fusion (RRF)
 
@@ -113,6 +112,36 @@ Responses are generated in the same language as the query.
 * Framer Motion
 * Radix UI
 * React Markdown
+
+---
+
+# Embedding Architecture
+
+FinBot generates embeddings via a **remote API** instead of a local SentenceTransformer model. This dramatically reduces startup memory and eliminates the need for PyTorch and CUDA libraries in production.
+
+## Embedding Provider Abstraction
+
+The backend uses a provider pattern (`backend/app/embeddings/provider.py`):
+
+| Provider | Description | Required Variables |
+|----------|-------------|--------------------|
+| `openrouter` (default) | Reuses your OpenRouter API key for embeddings | `OPENROUTER_API_KEY` |
+| `openai` | Direct OpenAI Embeddings API | `EMBEDDING_API_KEY` |
+
+To switch providers, set `EMBEDDING_PROVIDER=openai` in your `.env`.
+
+## Embedding Model
+
+The default model is **`text-embedding-3-small`** (1536-dimensional embeddings) via OpenRouter.
+
+> **Important:** If you change the embedding model to one with a different output dimension, you must **recreate the Pinecone index** to match the new dimension. The backend will raise a clear dimension-mismatch error at startup if dimensions do not match.
+
+To rebuild the index after changing the model:
+
+```bash
+cd backend
+python -m app.embeddings.index_pipeline
+```
 
 ---
 
@@ -133,7 +162,7 @@ Query Rewriting
       ▼
 Hybrid Retrieval
  ├── BM25
- └── Pinecone
+ └── Pinecone (via embedding API)
       │
       ▼
 Reciprocal Rank Fusion
@@ -161,10 +190,14 @@ FinBot/
 │   ├── app/
 │   │   ├── api/                 # REST API endpoints
 │   │   ├── core/                # Configuration & application settings
-│   │   ├── embeddings/          # Embedding indexing pipeline
+│   │   ├── embeddings/          # Embedding provider & indexing pipeline
+│   │   │   ├── provider.py      # Provider abstraction (OpenAI, OpenRouter)
+│   │   │   └── index_pipeline.py # Build / rebuild Pinecone index
 │   │   ├── evaluation/          # RAG evaluation & metrics
 │   │   ├── ingestion/           # Data loading, cleaning & chunking
 │   │   ├── llm/                 # Prompt engineering & LLM generation
+│   │   │   ├── prompt_builder.py
+│   │   │   └── generator.py
 │   │   ├── retrieval/           # Hybrid RAG retrieval pipeline
 │   │   │   ├── bm25.py
 │   │   │   ├── hybrid_search.py
@@ -201,6 +234,7 @@ FinBot/
 └── .gitignore
 ```
 
+---
 
 # Installation
 
@@ -248,15 +282,19 @@ backend/.env
 
 Required variables:
 
-| Variable            | Description               |
-| ------------------- | ------------------------- |
-| OPENROUTER_API_KEY  | OpenRouter API key        |
-| OPENROUTER_MODEL    | OpenRouter model          |
-| OPENROUTER_BASE_URL | OpenRouter endpoint       |
-| PINECONE_API_KEY    | Pinecone API key          |
-| PINECONE_INDEX_NAME | Pinecone index            |
-| EMBEDDING_MODEL     | SentenceTransformer model |
-| HF_TOKEN            | Hugging Face Read Token   |
+| Variable               | Description                        | Default                        |
+|------------------------|------------------------------------|--------------------------------|
+| `OPENROUTER_API_KEY`   | OpenRouter API key (LLM + embeddings) | —                             |
+| `OPENROUTER_MODEL`     | OpenRouter model                   | `qwen/qwen3-8b:free`          |
+| `OPENROUTER_BASE_URL`  | OpenRouter endpoint                | `https://openrouter.ai/api/v1`|
+| `PINECONE_API_KEY`     | Pinecone API key                   | —                             |
+| `PINECONE_INDEX_NAME`  | Pinecone index                     | `finbot-bd`                   |
+| `EMBEDDING_PROVIDER`   | `openrouter` or `openai`           | `openrouter`                  |
+| `EMBEDDING_API_KEY`    | OpenAI key (only for `openai`)     | —                             |
+| `EMBEDDING_BASE_URL`   | Embedding API URL                  | —                             |
+| `EMBEDDING_MODEL`      | Embedding model name               | `text-embedding-3-small`      |
+| `EMBEDDING_DIMENSION`  | Embedding dimension                | `1536`                        |
+| `HF_TOKEN`             | Hugging Face Read Token            | —                             |
 
 ---
 
@@ -314,65 +352,6 @@ Example response:
 
 ---
 
-<<<<<<< HEAD
-```
-.
-├── backend/
-│   ├── app/
-│   │   ├── api/           # Routes (POST /api/v1/chat)
-│   │   ├── core/          # Config + version
-│   │   ├── ingestion/     # Loader, chunker, cleaner, pipeline
-│   │   ├── retrieval/     # BM25, vector store, hybrid search
-│   │   │   ├── intent_detector.py  # Fine-grained intent classification
-│   │   │   ├── hybrid_search.py    # BM25 + Pinecone + RRF fusion
-│   │   │   ├── bm25.py             # Keyword-based retrieval
-│   │   │   ├── vector_store.py     # Pinecone semantic search
-│   │   │   └── query_rewriter.py   # Domain-specific query rewriting
-│   │   ├── llm/           # Prompt builder + OpenRouter generator
-│   │   │   ├── prompt_builder.py   # System prompts + language handling
-│   │   │   └── generator.py        # OpenRouter API + fallback logic
-│   │   └── evaluation/    # Custom RAG metrics
-│   ├── data/raw/          # bKash/Nagad/DBBL FAQ text files
-│   ├── tests/             # Passing tests
-│   │   └── test_rag_pipeline.py    # Intent detection + chunk filtering tests
-│   └── requirements.txt   # Python dependencies
-├── frontend/
-│   ├── src/app/           # Next.js App Router
-│   ├── src/components/    # Chat UI + Sidebar
-│   ├── src/hooks/         # React hooks (useChat, useConversations)
-│   └── package.json
-└── package.json           # Root workspace scripts
-```
-
-## Supported Banks
-
-- bKash
-- Nagad
-- Dutch-Bangla Bank (DBBL)
-
-## Features
-
-- **Intent-aware retrieval**: Detects fine-grained banking intents (send_money, cash_in, cash_out, pin_reset, etc.) and boosts relevant chunks while penalizing unrelated topics
-- **Single-topic answers**: Prevents mixing multiple banking workflows in one response
-- **Conversation isolation**: Each API request is permanently bound to its originating conversation; switching conversations never leaks responses or spinners
-- **AbortController cleanup**: Deleting a generating conversation cancels its in-flight request
-- **Stale response protection**: Rapid consecutive sends are safely handled with unique request IDs
-- **Natural Banglish generation**: Answers in Banglish (Latin script) with English banking terms
-- **Audit logging**: Intent detection and final chunk topics are logged for retrieval quality monitoring
-
-## Testing
-
-Backend tests:
-```bash
-cd backend
-python -m pytest tests/test_rag_pipeline.py -v
-```
-
-Frontend tests:
-```bash
-cd frontend
-npx jest
-=======
 # Current Supported Services
 
 * bKash
@@ -427,4 +406,3 @@ npx jest
 # License
 
 This project is licensed under the MIT License.
->>>>>>> 7dffae967535fed14f4ec1bdd58f8ac5a9b69c84

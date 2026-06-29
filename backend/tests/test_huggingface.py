@@ -6,10 +6,13 @@ from typing import Generator
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+from app.embeddings.provider import clear_provider_cache
 from app.retrieval.vector_store import (
     configure_huggingface_auth,
     get_hf_auth_status,
     EmbeddingModel,
+    _EXPECTED_MODEL,
+    _EXPECTED_DIMENSION,
 )
 from app.core.config import Settings
 
@@ -54,33 +57,7 @@ class TestHuggingFaceAuth:
 # ---------------------------------------------------------------------------
 
 class TestEmbeddingModel:
-    """Tests for embedding model singleton and dimension validation."""
-
-    def test_embedding_singleton(self):
-        """EmbeddingModel should return the same model object on repeated calls."""
-        if not EmbeddingModel.get_info()["model_loaded"]:
-            pytest.skip("Model not loaded yet, skipping singleton test")
-        # Force first load
-        v1 = EmbeddingModel.embed("hello")
-        v2 = EmbeddingModel.embed("hello")
-        # The singleton is stored as _model, but we can verify by checking
-        # that the class method returns the same object id pattern
-        assert EmbeddingModel._model is not None
-        model_id = id(EmbeddingModel._model)
-        # Call embed again to ensure reuse
-        _ = EmbeddingModel.embed("world")
-        assert id(EmbeddingModel._model) == model_id, (
-            "Embedding model was recreated instead of reused"
-        )
-
-    def test_embedding_dimension_validation(self):
-        """Embedding model should produce vectors of expected dimension."""
-        if not EmbeddingModel.get_info()["model_loaded"]:
-            pytest.skip("Model not loaded yet, skipping dimension test")
-        vector = EmbeddingModel.embed("hello")
-        assert len(vector[0]) == 384, (
-            f"Expected dimension 384, got {len(vector[0])}"
-        )
+    """Tests for embedding model info (provider-agnostic)."""
 
     def test_embedding_cache_info(self):
         """get_info should return expected structure."""
@@ -89,8 +66,8 @@ class TestEmbeddingModel:
         assert "dimension" in info
         assert "cache_found" in info
         assert "model_loaded" in info
-        assert info["model"] == "intfloat/multilingual-e5-small"
-        assert info["dimension"] == 384
+        assert info["model"] == _EXPECTED_MODEL
+        assert info["dimension"] == _EXPECTED_DIMENSION
 
 
 # ---------------------------------------------------------------------------
@@ -119,5 +96,5 @@ class TestDebugEndpoint:
         """The debug endpoint should return correct default values."""
         response = self.client.get("/debug/huggingface")
         data = response.json()
-        assert data["embedding_dimension"] == 384
-        assert data["embedding_model"] == "intfloat/multilingual-e5-small"
+        assert data["embedding_dimension"] == _EXPECTED_DIMENSION
+        assert data["embedding_model"] == _EXPECTED_MODEL

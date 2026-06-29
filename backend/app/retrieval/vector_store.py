@@ -1,8 +1,8 @@
 """Vector store and embedding module for semantic retrieval.
 
 Provides:
-- ``EmbeddingModel``: Singleton wrapper around ``SentenceTransformer`` that
-  loads ``intfloat/multilingual-e5-small`` and validates output dimension.
+- ``EmbeddingModel``: Singleton wrapper around an ``EmbeddingProvider`` that
+  lazily initialises the configured provider and validates output dimension.
 - ``PineconeStore``: Interface to the Pinecone vector index for upserting
   and querying chunks.
 
@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 from app.core.config import Settings
+from app.embeddings.provider import get_embedding_provider
 
 logger = logging.getLogger(__name__)
 
@@ -99,22 +100,22 @@ def get_hf_auth_status() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Embedding model
+# Embedding model (remote provider wrapper)
 # ---------------------------------------------------------------------------
 
-_EXPECTED_MODEL = "intfloat/multilingual-e5-small"
-_EXPECTED_DIMENSION = 384
+_EXPECTED_MODEL = "text-embedding-3-small"
+_EXPECTED_DIMENSION = 1536
 
 
 class EmbeddingModel:
-    """A singleton-style wrapper around a ``SentenceTransformer`` model.
+    """A singleton-style wrapper around a remote ``EmbeddingProvider``.
 
-    The model is loaded lazily on first call to ``embed()`` and cached for
-    subsequent calls.  The output dimension is validated against the
-    configured expected dimension (default: 384).
+    The provider is initialised lazily on first call to ``embed()`` and
+    cached for subsequent calls.  The output dimension is validated against
+    the configured expected dimension (default: 1536).
     """
 
-    _model: Optional[Any] = None
+    _provider: Any = None
     _cache_found: bool = False
 
     # ------------------------------------------------------------------
@@ -123,18 +124,16 @@ class EmbeddingModel:
 
     @classmethod
     def embed(cls, texts: str | List[str]) -> np.ndarray:
-        """Compute embeddings for one or more texts."""
-        if cls._model is None:
-            cls._load_model()
+        """Compute embeddings for one or more texts via remote API."""
+        if cls._provider is None:
+            cls._load_provider()
         else:
-            logger.info("[CACHE] Embedding model reused")
+            logger.info("[CACHE] Embedding provider reused")
 
         if isinstance(texts, str):
             texts = [texts]
 
-        vectors = cls._model.encode(texts, normalize_embeddings=True)  # type: ignore[union-attr]
-        vectors = np.asarray(vectors, dtype=np.float32)
-
+        vectors = cls._provider.embed(texts)
         return vectors
 
     @classmethod
@@ -144,7 +143,7 @@ class EmbeddingModel:
             "model": _EXPECTED_MODEL,
             "dimension": _EXPECTED_DIMENSION,
             "cache_found": cls._cache_found,
-            "model_loaded": cls._model is not None,
+            "model_loaded": cls._provider is not None,
         }
 
     # ------------------------------------------------------------------
@@ -152,61 +151,33 @@ class EmbeddingModel:
     # ------------------------------------------------------------------
 
     @classmethod
-    def _load_model(cls) -> None:
+    def _load_provider(cls) -> None:
         settings = Settings()
         model_name = settings.embedding_model
-        logger.info("Loading embedding model: %s", model_name)
+        dim = settings.embedding_dimension
+        logger.info("Initialising embedding provider (model=%s, dim=%d)", model_name, dim)
 
-        # Log cache paths for diagnostics
-        hf_home = os.environ.get("HF_HOME", "default")
-        transformers_cache = os.environ.get(
-            "TRANSFORMERS_CACHE",
-            os.path.join(os.path.expanduser("~"), ".cache", "huggingface"),
+        # Instantiate the configured remote provider (lazy — no network yet)
+        from app.embeddings.provider import get_embedding_provider
+        cls._provider = get_embedding_provider()
+
+        logger.info(
+            "Embedding provider ready: %s (model=%s, dimension=%d)",
+            settings.embedding_provider, model_name, _EXPECTED_DIMENSION,
         )
-        logger.info("[CACHE] HF_HOME=%s", hf_home)
-        logger.info("[CACHE] TRANSFORMERS_CACHE=%s", transformers_cache)
 
-        # Check if model files already exist in cache
-        cached = False
+        # Verify dimension with a test embedding
         try:
-            from huggingface_hub import try_to_load_from_cache
-            # Check a known file in the model's cache directory
-            model_path = try_to_load_from_cache(model_name, "modules.json")
-            cached = model_path is not None
-        except ImportError:
-            pass
-        except Exception:
-            pass
-        cls._cache_found = cached
-        if cached:
-            logger.info("[CACHE] Embedding model found in local cache")
-        else:
-            logger.info("[CACHE] Embedding model not in local cache, will download")
-
-        # Lazy import: only load SentenceTransformer when actually needed
-        from sentence_transformers import SentenceTransformer
-
-        try:
-            cls._model = SentenceTransformer(model_name)
-            logger.info("Embedding model loaded (model=%s, dimension=%d)", model_name, _EXPECTED_DIMENSION)
-        except Exception as exc:
-            logger.error("[HF] Failed to load SentenceTransformer: %s", exc)
-            raise RuntimeError(
-                f"Failed to load embedding model '{model_name}': {exc}"
-            ) from exc
-
-        # Verify dimension
-        try:
-            test_vec = cls._model.encode("hello", normalize_embeddings=True)
-            actual_dim = len(test_vec)
+            test_vec = cls._provider.embed(["hello"])
+            actual_dim = test_vec.shape[1]
             if actual_dim != _EXPECTED_DIMENSION:
                 raise RuntimeError(
-                    f"Embedding model returned dimension {actual_dim}, "
+                    f"Embedding provider returned dimension {actual_dim}, "
                     f"but expected {_EXPECTED_DIMENSION}. "
                     f"Check that EMBEDDING_MODEL is '{_EXPECTED_MODEL}' "
                     f"and EMBEDDING_DIMENSION is {_EXPECTED_DIMENSION}. "
-                    f"If you changed the embedding model, you must recreate the Pinecone index "
-                    f"to match the new dimension."
+                    f"If you changed the embedding model, you must recreate "
+                    f"the Pinecone index to match the new dimension."
                 )
             logger.info("Embedding dimension verified: %d", actual_dim)
         except RuntimeError:
@@ -305,8 +276,8 @@ def semantic_search(
     """
     index = _get_pinecone_index()  # cached after first call
 
-    # Embed the query (1 x 384).
-    vectors = EmbeddingModel.embed(query)  # cached model after first call
+    # Embed the query (1 x 1536).
+    vectors = EmbeddingModel.embed(query)  # cached provider after first call
 
     # Query Pinecone.
     response = index.query(

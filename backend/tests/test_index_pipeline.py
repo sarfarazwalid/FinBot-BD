@@ -62,9 +62,9 @@ def sample_chunks() -> List[Dict[str, Any]]:
 
 @pytest.fixture
 def sample_embeddings() -> np.ndarray:
-    """Return a dummy (3, 384) embedding array."""
+    """Return a dummy (3, 1536) embedding array."""
     rng = np.random.default_rng(42)
-    vectors = rng.normal(size=(3, 384)).astype(np.float32)
+    vectors = rng.normal(size=(3, 1536)).astype(np.float32)
     # Normalise to unit length (like the real model does).
     norms = np.linalg.norm(vectors, axis=1, keepdims=True)
     return vectors / norms
@@ -128,7 +128,7 @@ class TestBuildPineconeVectors:
 
             assert "values" in v, f"vector[{i}] missing values"
             assert isinstance(v["values"], list)
-            assert len(v["values"]) == 384
+            assert len(v["values"]) == 1536
             assert all(isinstance(x, float) for x in v["values"])
 
             assert "metadata" in v, f"vector[{i}] missing metadata"
@@ -191,7 +191,7 @@ class TestBatchUpsert:
             for i in range(183)
         ]
         rng = np.random.default_rng(0)
-        embeddings = rng.normal(size=(183, 384)).astype(np.float32)
+        embeddings = rng.normal(size=(183, 1536)).astype(np.float32)
         norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
         embeddings = embeddings / norms
 
