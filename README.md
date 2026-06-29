@@ -1,136 +1,320 @@
 # FinBot BD
 
-Bilingual (Bengali / English) hybrid RAG customer support assistant for Bangladeshi banking FAQs.
+> **Your Intelligent Banking Assistant**
 
-## One-command development
+FinBot is an AI-powered multilingual banking assistant built specifically for Bangladesh. It uses a **Hybrid Retrieval-Augmented Generation (Hybrid RAG)** pipeline to answer banking and mobile banking questions accurately while minimizing hallucinations.
+
+It supports **English**, **বাংলা**, and **Banglish**, and currently provides assistance for services including:
+
+* bKash
+* Nagad
+* Dutch-Bangla Bank (DBBL)
+
+---
+
+# Features
+
+## AI & RAG
+
+* Hybrid Retrieval-Augmented Generation (BM25 + Pinecone Vector Search)
+* Reciprocal Rank Fusion (RRF)
+* Intent-aware retrieval
+* Fine-grained banking intent detection
+* Query rewriting
+* Context filtering before generation
+* Topic-aware reranking
+* OpenRouter LLM integration
+* Automatic multi-model fallback
+* Retrieval-aware confidence scoring
+* Source citations
+* Hallucination reduction
+
+---
+
+## Banking Intelligence
+
+Supports banking operations such as:
+
+* Send Money
+* Cash In
+* Cash Out
+* PIN Reset
+* Mobile Recharge
+* Bill Payment
+* Balance Check
+* Mini Statement
+* Bank Transfer
+* Loan Information
+* Account Opening
+* Fixed Deposit (FD)
+
+---
+
+## Language Support
+
+FinBot automatically detects the user's language.
+
+Supported input:
+
+* English
+* বাংলা
+* Banglish
+
+Examples:
+
+```
+How to reset bKash PIN?
+```
+
+```
+বিকাশ পিন রিসেট করবো কিভাবে?
+```
+
+```
+bkash pin reset korbo kivabe?
+```
+
+Responses are generated in the same language as the query.
+
+---
+
+## Safety Features
+
+* Out-of-domain detection
+* Banking-only responses
+* Ambiguity detection
+* Clarification workflow
+* Intent-aware chunk filtering
+* Conversation isolation
+* Request cancellation
+* Stale response protection
+
+---
+
+# Tech Stack
+
+## Backend
+
+* Python
+* FastAPI
+* Pinecone
+* SentenceTransformers
+* Hugging Face
+* OpenRouter
+* BM25
+* Reciprocal Rank Fusion (RRF)
+
+## Frontend
+
+* Next.js 14
+* React
+* TypeScript
+* Tailwind CSS
+* Framer Motion
+* Radix UI
+* React Markdown
+
+---
+
+# Architecture
+
+```
+User Query
+      │
+      ▼
+Language Detection
+      │
+      ▼
+Intent Detection
+      │
+      ▼
+Query Rewriting
+      │
+      ▼
+Hybrid Retrieval
+ ├── BM25
+ └── Pinecone
+      │
+      ▼
+Reciprocal Rank Fusion
+      │
+      ▼
+Intent-based Filtering
+      │
+      ▼
+Prompt Builder
+      │
+      ▼
+OpenRouter LLM
+      │
+      ▼
+Generated Response
+```
+
+---
+
+## 📁 Project Structure
+
+```
+FinBot/
+├── backend/                     # FastAPI backend
+│   ├── app/
+│   │   ├── api/                 # REST API endpoints
+│   │   ├── core/                # Configuration & application settings
+│   │   ├── embeddings/          # Embedding indexing pipeline
+│   │   ├── evaluation/          # RAG evaluation & metrics
+│   │   ├── ingestion/           # Data loading, cleaning & chunking
+│   │   ├── llm/                 # Prompt engineering & LLM generation
+│   │   ├── retrieval/           # Hybrid RAG retrieval pipeline
+│   │   │   ├── bm25.py
+│   │   │   ├── hybrid_search.py
+│   │   │   ├── intent_detector.py
+│   │   │   ├── query_rewriter.py
+│   │   │   ├── rrf.py
+│   │   │   └── vector_store.py
+│   │   ├── ambiguity.py         # Ambiguous query detection
+│   │   ├── intent_state.py      # Intent tracking
+│   │   ├── ood.py               # Out-of-domain detection
+│   │   └── main.py              # FastAPI entry point
+│   ├── data/                    # Banking knowledge base
+│   ├── scripts/                 # Utility scripts
+│   ├── tests/                   # Backend test suite
+│   └── requirements.txt
+│
+├── frontend/                    # Next.js frontend
+│   ├── src/
+│   │   ├── app/                 # App Router pages
+│   │   ├── components/          # Reusable UI components
+│   │   │   ├── chat/
+│   │   │   └── ui/
+│   │   ├── hooks/               # React hooks & conversation state
+│   │   ├── lib/                 # API client, storage & utilities
+│   │   ├── types/               # Shared TypeScript types
+│   │   └── __tests__/           # Frontend test setup
+│   ├── package.json
+│   └── tailwind.config.ts
+│
+├── brand/                       # Brand assets (logos, icons, design files)
+│
+├── README.md
+├── package.json                 # Root workspace scripts
+└── .gitignore
+```
+
+
+# Installation
+
+## Clone
 
 ```bash
-npm install
-npm run dev
+git clone https://github.com/YOUR_USERNAME/FinBot.git
+cd FinBot
 ```
 
-This starts **both** services simultaneously:
+---
 
-| Service | URL | Label |
-|---------|-----|-------|
-| Backend (FastAPI) | http://localhost:8000 | `[backend]` cyan |
-| Frontend (Next.js) | http://localhost:3000 | `[frontend]` green |
-
-## Available scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start backend + frontend concurrently |
-| `npm run backend` | Start FastAPI only (`uvicorn --reload :8000`) |
-| `npm run frontend` | Start Next.js only (`next dev -p 3000`) |
-| `npm run install:all` | Install root + frontend dependencies |
-| `npm run health` | Quick check — `curl http://localhost:8000/health` |
-| `npm run test` | Run all backend tests |
-
-## Getting started
-
-1. Clone the repo.
-2. Copy `backend/.env.example` → `backend/.env` and add your API keys:
-   - `OPENROUTER_API_KEY` — from [openrouter.ai](https://openrouter.ai)
-   - `PINECONE_API_KEY` — from [pinecone.io](https://pinecone.io)
-3. Install Python dependencies:
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   cd ..
-   ```
-4. Install Node dependencies:
-   ```bash
-   npm run install:all
-   ```
-5. Start everything:
-   ```bash
-   npm run dev
-   ```
-6. Open http://localhost:3000
-
-## Environment variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENROUTER_API_KEY` | *(empty)* | OpenRouter API key |
-| `OPENROUTER_MODEL` | `qwen/qwen3-8b:free` | Model identifier on OpenRouter |
-| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenRouter base URL |
-| `PINECONE_API_KEY` | *(empty)* | Pinecone API key |
-| `PINECONE_INDEX_NAME` | `finbot-bd` | Pinecone index name |
-| `EMBEDDING_MODEL` | `intfloat/multilingual-e5-large` | SentenceTransformer model |
-| `TOP_K` | `5` | Number of retrieval results |
-| `HF_TOKEN` | *(empty)* | Hugging Face access token (see below) |
-
-## Hugging Face Authentication
-
-The embedding model (`intfloat/multilingual-e5-large`) is downloaded from
-Hugging Face.  Without authentication you will see this warning:
-
-```
-Warning: You are sending unauthenticated requests to the HF Hub.
-```
-
-To silence the warning and get higher rate limits:
-
-1.  Go to https://huggingface.co/settings/tokens and create a **read** token.
-2.  Add it to `backend/.env`:
-
-    ```
-    HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxx
-    ```
-
-3.  Restart the backend.
-
-On startup you should see:
-
-```
-HF Token Present: YES
-[CACHE] HuggingFace authenticated: YES
-```
-
-The token is **never** logged or exposed in source code.  It is only read from
-`backend/.env` at runtime and forwarded to the Hugging Face SDK via
-environment variables.
-
-## Verify OpenRouter connectivity
+## Backend Setup
 
 ```bash
 cd backend
-python -c "
-import os
-from openai import OpenAI
-client = OpenAI(
-    api_key=os.environ['OPENROUTER_API_KEY'],
-    base_url=os.environ.get('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1') + '/chat/completions'
-)
-resp = client.chat.completions.create(
-    model=os.environ.get('OPENROUTER_MODEL', 'qwen/qwen3-8b:free'),
-    messages=[{'role': 'user', 'content': 'Say hello from OpenRouter!'}]
-)
-print('OpenRouter says:', resp.choices[0].message.content)
-"
+pip install -r requirements.txt
 ```
 
-## Health check
+---
+
+## Frontend Setup
 
 ```bash
-curl http://localhost:8000/health
+cd ..
+npm install
+npm run install:all
 ```
 
-Returns:
+---
+
+## Environment Variables
+
+Copy
+
+```
+backend/.env.example
+```
+
+to
+
+```
+backend/.env
+```
+
+Required variables:
+
+| Variable            | Description               |
+| ------------------- | ------------------------- |
+| OPENROUTER_API_KEY  | OpenRouter API key        |
+| OPENROUTER_MODEL    | OpenRouter model          |
+| OPENROUTER_BASE_URL | OpenRouter endpoint       |
+| PINECONE_API_KEY    | Pinecone API key          |
+| PINECONE_INDEX_NAME | Pinecone index            |
+| EMBEDDING_MODEL     | SentenceTransformer model |
+| HF_TOKEN            | Hugging Face Read Token   |
+
+---
+
+# Running
+
+Start both backend and frontend:
+
+```bash
+npm run dev
+```
+
+Backend
+
+```
+http://localhost:8000
+```
+
+Frontend
+
+```
+http://localhost:3000
+```
+
+---
+
+# Available Scripts
+
+| Script              | Description                |
+| ------------------- | -------------------------- |
+| npm run dev         | Start backend and frontend |
+| npm run backend     | Backend only               |
+| npm run frontend    | Frontend only              |
+| npm run install:all | Install all dependencies   |
+| npm run health      | Backend health check       |
+| npm run test        | Run backend tests          |
+
+---
+
+# Health Check
+
+```
+GET /health
+```
+
+Example response:
+
 ```json
 {
   "status": "ok",
-  "service": "FinBot BD",
+  "service": "FinBot",
   "version": "1.0.0",
-  "provider": "openrouter",
-  "model": "qwen/qwen3-8b:free"
+  "provider": "openrouter"
 }
 ```
 
-## Project structure
+---
 
+<<<<<<< HEAD
 ```
 .
 ├── backend/
@@ -188,3 +372,59 @@ Frontend tests:
 ```bash
 cd frontend
 npx jest
+=======
+# Current Supported Services
+
+* bKash
+* Nagad
+* Dutch-Bangla Bank (DBBL)
+
+---
+
+# Planned Support
+
+* BRAC Bank
+* City Bank
+* Eastern Bank PLC
+* Islami Bank
+* Bank Asia
+* Prime Bank
+* Mutual Trust Bank
+* Standard Chartered Bangladesh
+
+---
+
+# Highlights
+
+* Hybrid RAG Architecture
+* Intent-aware Retrieval
+* Multilingual Responses
+* Natural Banglish Generation
+* Automatic LLM Failover
+* Retrieval Confidence Scoring
+* Conversation Isolation
+* Modern Next.js Interface
+* Responsive UI
+* Source Attribution
+
+---
+
+# Future Roadmap
+
+* Admin Dashboard
+* Knowledge Base Management
+* Conversation Analytics
+* Voice Support
+* OCR Document Upload
+* PDF Processing
+* Streaming Responses
+* User Authentication
+* Feedback Learning
+* Additional Banking Services
+
+---
+
+# License
+
+This project is licensed under the MIT License.
+>>>>>>> 7dffae967535fed14f4ec1bdd58f8ac5a9b69c84
