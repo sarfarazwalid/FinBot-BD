@@ -68,7 +68,7 @@ def generate_embeddings(chunks: List[Dict[str, Any]]) -> np.ndarray:
         chunks: List of chunk dicts (must contain ``"text"``).
 
     Returns:
-        A 2-D float32 NumPy array of shape ``(n_chunks, 1024)``.
+        A 2-D float32 NumPy array of shape ``(n_chunks, 384)``.
     """
     texts = [c["text"] for c in chunks]
     logger.info("Generating embeddings for %d texts...", len(texts))
@@ -102,7 +102,7 @@ def build_pinecone_vectors(
 
     Args:
         chunks: Original chunk dicts.
-        embeddings: 2-D array of shape ``(n_chunks, 1024)``.
+        embeddings: 2-D array of shape ``(n_chunks, 384)``.
 
     Returns:
         List of dicts ready for ``index.upsert()``.

@@ -24,8 +24,8 @@ class Settings(BaseSettings):
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
 
     # Embeddings
-    embedding_model: str = "intfloat/multilingual-e5-large"
-    embedding_dimension: int = 1024
+    embedding_model: str = "intfloat/multilingual-e5-small"
+    embedding_dimension: int = 384
 
     # Pinecone
     pinecone_api_key: str = ""

@@ -2,7 +2,7 @@
 
 Provides:
 - ``EmbeddingModel``: Singleton wrapper around ``SentenceTransformer`` that
-  loads ``intfloat/multilingual-e5-large`` and validates output dimension.
+  loads ``intfloat/multilingual-e5-small`` and validates output dimension.
 - ``PineconeStore``: Interface to the Pinecone vector index for upserting
   and querying chunks.
 
@@ -102,8 +102,8 @@ def get_hf_auth_status() -> dict:
 # Embedding model
 # ---------------------------------------------------------------------------
 
-_EXPECTED_MODEL = "intfloat/multilingual-e5-large"
-_EXPECTED_DIMENSION = 1024
+_EXPECTED_MODEL = "intfloat/multilingual-e5-small"
+_EXPECTED_DIMENSION = 384
 
 
 class EmbeddingModel:
@@ -111,10 +111,10 @@ class EmbeddingModel:
 
     The model is loaded lazily on first call to ``embed()`` and cached for
     subsequent calls.  The output dimension is validated against the
-    configured expected dimension (default: 1024).
+    configured expected dimension (default: 384).
     """
 
-    _model: Optional[SentenceTransformer] = None
+    _model: Optional[Any] = None
     _cache_found: bool = False
 
     # ------------------------------------------------------------------
@@ -188,7 +188,7 @@ class EmbeddingModel:
 
         try:
             cls._model = SentenceTransformer(model_name)
-            logger.info("Embedding model loaded (dimension=%d)", _EXPECTED_DIMENSION)
+            logger.info("Embedding model loaded (model=%s, dimension=%d)", model_name, _EXPECTED_DIMENSION)
         except Exception as exc:
             logger.error("[HF] Failed to load SentenceTransformer: %s", exc)
             raise RuntimeError(
@@ -202,9 +202,11 @@ class EmbeddingModel:
             if actual_dim != _EXPECTED_DIMENSION:
                 raise RuntimeError(
                     f"Embedding model returned dimension {actual_dim}, "
-                    f"but Pinecone index expects {_EXPECTED_DIMENSION}. "
-                    f"Check that EMBEDDING_MODEL is {_EXPECTED_MODEL!r} "
-                    f"and EMBEDDING_DIMENSION is {_EXPECTED_DIMENSION}."
+                    f"but expected {_EXPECTED_DIMENSION}. "
+                    f"Check that EMBEDDING_MODEL is '{_EXPECTED_MODEL}' "
+                    f"and EMBEDDING_DIMENSION is {_EXPECTED_DIMENSION}. "
+                    f"If you changed the embedding model, you must recreate the Pinecone index "
+                    f"to match the new dimension."
                 )
             logger.info("Embedding dimension verified: %d", actual_dim)
         except RuntimeError:
@@ -269,8 +271,11 @@ def _get_pinecone_index() -> Any:
         if index_dimension != _EXPECTED_DIMENSION:
             raise RuntimeError(
                 f"Pinecone index '{index_name}' has dimension {index_dimension}, "
-                f"but the embedding model produces {_EXPECTED_DIMENSION}-dim vectors. "
-                f"Recreate the index with dimension={_EXPECTED_DIMENSION}."
+                f"but the current embedding model '{_EXPECTED_MODEL}' produces "
+                f"{_EXPECTED_DIMENSION}-dim vectors. "
+                f"This index was created with a different embedding model. "
+                f"Recreate the index with dimension={_EXPECTED_DIMENSION} "
+                f"or set EMBEDDING_MODEL to match the existing index."
             )
     except Exception:
         logger.warning("Could not validate Pinecone index dimension")
@@ -300,7 +305,7 @@ def semantic_search(
     """
     index = _get_pinecone_index()  # cached after first call
 
-    # Embed the query (1 x 1024).
+    # Embed the query (1 x 384).
     vectors = EmbeddingModel.embed(query)  # cached model after first call
 
     # Query Pinecone.

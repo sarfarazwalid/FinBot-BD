@@ -78,8 +78,8 @@ class TestEmbeddingModel:
         if not EmbeddingModel.get_info()["model_loaded"]:
             pytest.skip("Model not loaded yet, skipping dimension test")
         vector = EmbeddingModel.embed("hello")
-        assert len(vector[0]) == 1024, (
-            f"Expected dimension 1024, got {len(vector[0])}"
+        assert len(vector[0]) == 384, (
+            f"Expected dimension 384, got {len(vector[0])}"
         )
 
     def test_embedding_cache_info(self):
@@ -89,8 +89,8 @@ class TestEmbeddingModel:
         assert "dimension" in info
         assert "cache_found" in info
         assert "model_loaded" in info
-        assert info["model"] == "intfloat/multilingual-e5-large"
-        assert info["dimension"] == 1024
+        assert info["model"] == "intfloat/multilingual-e5-small"
+        assert info["dimension"] == 384
 
 
 # ---------------------------------------------------------------------------
@@ -119,5 +119,5 @@ class TestDebugEndpoint:
         """The debug endpoint should return correct default values."""
         response = self.client.get("/debug/huggingface")
         data = response.json()
-        assert data["embedding_dimension"] == 1024
-        assert data["embedding_model"] == "intfloat/multilingual-e5-large"
+        assert data["embedding_dimension"] == 384
+        assert data["embedding_model"] == "intfloat/multilingual-e5-small"

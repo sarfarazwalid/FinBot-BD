@@ -23,7 +23,7 @@ def _print_startup_report() -> None:
     print(f"OpenRouter Key Present:  {key_present}")
     print(f"Fallback Mode:           {fallback_mode}")
     print(f"")
-    print(f"Embedding Model:         {settings.embedding_model}")
+    print(f"Embedding Model:         {settings.embedding_model} (multilingual-e5-small)")
     print(f"Embedding Dimension:     {settings.embedding_dimension}")
     print(f"Embedding Model Status:  deferred (lazy load on first request)")
     print(f"Pinecone Status:         deferred (lazy connect on first request)")

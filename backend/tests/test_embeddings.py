@@ -2,7 +2,7 @@
 
 Verifies that:
 1. The ``EmbeddingModel`` class loads correctly.
-2. Generated embeddings have the expected dimension (1024).
+2. Generated embeddings have the expected dimension (384).
 3. Embeddings are normalized (unit vectors for cosine similarity).
 """
 
@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from app.retrieval.vector_store import EmbeddingModel, _EXPECTED_DIMENSION
+from app.retrieval.vector_store import EmbeddingModel, _EXPECTED_DIMENSION, _EXPECTED_MODEL
 
 
 class TestEmbeddingModel:
@@ -34,6 +34,7 @@ class TestEmbeddingModel:
         assert vector.shape == (1, _EXPECTED_DIMENSION), (
             f"Expected (1, {_EXPECTED_DIMENSION}), got {vector.shape}"
         )
+        assert _EXPECTED_DIMENSION == 384
 
     def test_embed_multiple_texts(self: TestEmbeddingModel) -> None:
         """Multiple texts should produce a batch of vectors."""
@@ -70,13 +71,15 @@ class TestEmbeddingModel:
         # Temporarily patch the expected dimension constant.
         import app.retrieval.vector_store as vs
 
-        original = vs._EXPECTED_DIMENSION
+        original_dim = vs._EXPECTED_DIMENSION
+        original_model = vs._EXPECTED_MODEL
         vs._EXPECTED_DIMENSION = 9999  # wrong dimension
         try:
             with pytest.raises(RuntimeError, match="returned dimension"):
                 EmbeddingModel.embed("test")
         finally:
-            vs._EXPECTED_DIMENSION = original
+            vs._EXPECTED_DIMENSION = original_dim
+            vs._EXPECTED_MODEL = original_model
 
     # ------------------------------------------------------------------
     # Idempotency / caching
