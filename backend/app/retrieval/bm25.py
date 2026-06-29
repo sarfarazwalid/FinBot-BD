@@ -2,6 +2,9 @@
 
 Loads chunk corpus from ``chunks.json``, builds a BM25Okapi index, and
 provides ``bm25_search()`` for keyword-based retrieval.
+
+Handles missing or invalid corpus gracefully: logs a warning and returns
+empty results instead of crashing.
 """
 
 from __future__ import annotations
@@ -54,11 +57,17 @@ def _tokenize(text: str) -> List[str]:
 
 def _load_corpus(path: Path = CHUNKS_PATH) -> List[Dict[str, Any]]:
     if not path.exists():
-        raise FileNotFoundError(f"Chunks file not found: {path}")
+        raise FileNotFoundError(
+            f"Processed corpus missing at: {path}. "
+            "Run preprocessing first: cd backend && python -m app.ingestion.pipeline"
+        )
     with open(path, "r", encoding="utf-8") as f:
         chunks: List[Dict[str, Any]] = json.load(f)
     if not chunks:
-        raise ValueError(f"Chunks file is empty: {path}")
+        raise ValueError(
+            f"Chunks file is empty: {path}. "
+            "Run preprocessing first: cd backend && python -m app.ingestion.pipeline"
+        )
     return chunks
 
 
@@ -69,20 +78,50 @@ def _load_corpus(path: Path = CHUNKS_PATH) -> List[Dict[str, Any]]:
 _corpus: Optional[List[Dict[str, Any]]] = None
 _tokenized_corpus: Optional[List[List[str]]] = None
 _bm25: Optional[BM25Okapi] = None
+_CORPUS_MISSING: bool = False
 
 
 def _ensure_index() -> None:
-    """Load corpus and build BM25 index on first call."""
-    global _corpus, _tokenized_corpus, _bm25
+    """Load corpus and build BM25 index on first call.
+
+    If the corpus file is missing or empty, logs a warning and marks the
+    index as unavailable.  Subsequent search calls will return empty lists
+    instead of crashing.
+    """
+    global _corpus, _tokenized_corpus, _bm25, _CORPUS_MISSING
+
     if _bm25 is not None:
         logger.info("[CACHE] BM25 index reused")
         return
 
+    if _CORPUS_MISSING:
+        return
+
     logger.info("Loading BM25 corpus from %s", CHUNKS_PATH)
-    _corpus = _load_corpus()
+    try:
+        _corpus = _load_corpus()
+    except FileNotFoundError:
+        _CORPUS_MISSING = True
+        logger.warning(
+            "BM25 corpus not found at %s. "
+            "BM25 will return empty results. "
+            "To fix: cd backend && python -m app.ingestion.pipeline",
+            CHUNKS_PATH,
+        )
+        return
+    except ValueError as exc:
+        _CORPUS_MISSING = True
+        logger.warning("BM25 corpus invalid: %s", exc)
+        return
+
     _tokenized_corpus = [_tokenize(doc["text"]) for doc in _corpus]
     _bm25 = BM25Okapi(_tokenized_corpus)
     logger.info("BM25 index built with %d documents", len(_corpus))
+
+
+def is_bm25_ready() -> bool:
+    """Return True if the BM25 index has been successfully built."""
+    return _bm25 is not None
 
 
 # ---------------------------------------------------------------------------
@@ -101,11 +140,14 @@ def bm25_search(
 
     Returns:
         A list of dicts, each with keys: ``text``, ``source``,
-        ``language``, ``score``.
+        ``language``, ``score``.  Returns an empty list if the BM25
+        index is unavailable (corpus missing).
     """
     _ensure_index()
 
-    assert _bm25 is not None and _corpus is not None
+    if _bm25 is None or _corpus is None:
+        logger.warning("BM25 index not available, returning empty results")
+        return []
 
     tokenized_query = _tokenize(query)
 

@@ -124,10 +124,12 @@ models/
 # Data
 ##############################
 
+# Ignore raw source data but commit processed artifacts required by BM25/deployment
 data/raw/*
-data/processed/*
 !data/raw/.gitkeep
+data/processed/*
 !data/processed/.gitkeep
+!data/processed/chunks.json
 
 ##############################
 # Hugging Face Cache

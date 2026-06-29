@@ -4,14 +4,18 @@ from app.core.config import Settings
 from app.core.version import APP_NAME, DESCRIPTION, VERSION
 from app.api.routes import router as chat_router
 from app.retrieval.vector_store import configure_huggingface_auth, get_hf_auth_status, EmbeddingModel
+from app.retrieval.bm25 import is_bm25_ready, CHUNKS_PATH
 
 settings = Settings()
 
 
 def _print_startup_report() -> None:
     """Lightweight startup report with profiling-style INFO logs."""
+    from pathlib import Path
     key_present = "YES" if settings.openrouter_api_key else "NO"
     fallback_mode = "ENABLED" if not settings.openrouter_api_key else "DISABLED"
+    chunks_exist = CHUNKS_PATH.exists()
+    chunks_status = f"FOUND ({CHUNKS_PATH})" if chunks_exist else "MISSING (run ingestion pipeline)"
 
     print("=" * 48)
     print("FinBot BD Startup Report")
@@ -28,6 +32,7 @@ def _print_startup_report() -> None:
     print(f"Embedding Dimension:     {settings.embedding_dimension}")
     print(f"Embedding Model Status:  deferred (lazy connect on first request)")
     print(f"Pinecone Status:         deferred (lazy connect on first request)")
+    print(f"Corpus (chunks.json):    {chunks_status}")
     print(f"HF Auth Status:          deferred (authenticate on first request)")
     print("=" * 48)
 
@@ -55,13 +60,21 @@ app.include_router(chat_router, prefix=settings.api_prefix)
 @app.get("/health")
 async def health_check():
     settings = Settings()
+    chunks_exist = CHUNKS_PATH.exists()
+    bm25_ready = is_bm25_ready()
+
     return {
-        "status": "ok",
+        "status": "ok" if (settings.openrouter_api_key and chunks_exist) else "degraded",
         "service": APP_NAME,
         "version": VERSION,
         "provider": settings.llm_provider,
         "model": settings.openrouter_model,
-        "fallback_mode": not bool(settings.openrouter_api_key),
+        "openrouter_configured": bool(settings.openrouter_api_key),
+        "embedding_provider": settings.embedding_provider,
+        "embedding_model": settings.embedding_model,
+        "corpus_available": chunks_exist,
+        "bm25_ready": bm25_ready,
+        "pinecone_index": settings.pinecone_index_name,
     }
 
 

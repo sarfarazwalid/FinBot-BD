@@ -1,0 +1,37 @@
+# Render Blueprint — FinBot BD Backend
+services:
+  - type: web
+    name: finbot-bd-backend
+    runtime: python
+    repo: https://github.com/sarfarazwalid/FinBot-BD.git
+    branch: main
+    plan: free
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: EMBEDDING_PROVIDER
+        value: openrouter
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: qwen/qwen3-8b:free
+      - key: OPENROUTER_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: EMBEDDING_MODEL
+        value: text-embedding-3-small
+      - key: EMBEDDING_DIMENSION
+        value: "1536"
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX_NAME
+        value: finbot-bd
+      - key: PINECONE_ENVIRONMENT
+        value: aws
+      - key: TOP_K
+        value: "5"
+      - key: HF_TOKEN
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true
