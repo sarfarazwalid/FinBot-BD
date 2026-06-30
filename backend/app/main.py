@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import Settings
 from app.core.version import APP_NAME, DESCRIPTION, VERSION
 from app.api.routes import router as chat_router
-from app.retrieval.vector_store import configure_huggingface_auth, get_hf_auth_status, EmbeddingModel
+from app.retrieval.vector_store import configure_huggingface_auth, get_hf_auth_status, EmbeddingModel, get_pinecone_status
 from app.retrieval.bm25 import is_bm25_ready, CHUNKS_PATH
 
 settings = Settings()
@@ -11,7 +11,6 @@ settings = Settings()
 
 def _print_startup_report() -> None:
     """Lightweight startup report with profiling-style INFO logs."""
-    from pathlib import Path
     key_present = "YES" if settings.openrouter_api_key else "NO"
     fallback_mode = "ENABLED" if not settings.openrouter_api_key else "DISABLED"
     chunks_exist = CHUNKS_PATH.exists()
@@ -23,6 +22,7 @@ def _print_startup_report() -> None:
     print(f"Version:                 {VERSION}")
     print(f"Provider:                {settings.llm_provider}")
     print(f"Model:                   {settings.openrouter_model}")
+    print(f"Pinecone API Key:        {'PRESENT' if settings.pinecone_api_key else 'MISSING'}")
     print(f"Pinecone Index:          {settings.pinecone_index_name}")
     print(f"OpenRouter Key Present:  {key_present}")
     print(f"Fallback Mode:           {fallback_mode}")
@@ -62,9 +62,10 @@ async def health_check():
     settings = Settings()
     chunks_exist = CHUNKS_PATH.exists()
     bm25_ready = is_bm25_ready()
+    pinecone_status = get_pinecone_status()
 
     return {
-        "status": "ok" if (settings.openrouter_api_key and chunks_exist) else "degraded",
+        "status": "ok" if settings.openrouter_api_key and chunks_exist else "degraded",
         "service": APP_NAME,
         "version": VERSION,
         "provider": settings.llm_provider,
@@ -75,6 +76,8 @@ async def health_check():
         "corpus_available": chunks_exist,
         "bm25_ready": bm25_ready,
         "pinecone_index": settings.pinecone_index_name,
+        "pinecone_authenticated": pinecone_status.get("authenticated", False),
+        "pinecone_connected": pinecone_status.get("index_exists", False),
     }
 
 
@@ -94,3 +97,9 @@ async def debug_huggingface():
         "embedding_dimension": embed_info["dimension"],
         "model_loaded": embed_info["model_loaded"],
     }
+
+
+@app.get("/debug/pinecone")
+async def debug_pinecone():
+    """Return Pinecone connection status."""
+    return get_pinecone_status()

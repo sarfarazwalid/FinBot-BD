@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -187,10 +188,37 @@ class EmbeddingModel:
 
 
 # ---------------------------------------------------------------------------
-# Pinecone integration (cached client)
+# Pinecone integration (cached client, robust error handling)
 # ---------------------------------------------------------------------------
 
 _pinecone_index = None
+_pinecone_connection_error: Optional[str] = None
+
+
+def _validate_pinecone_config() -> tuple[bool, Optional[str]]:
+    """Validate Pinecone configuration from Settings.
+
+    Returns (is_valid, error_message).
+    Never exposes the API key in logs/errors.
+    """
+    settings = Settings()
+    api_key = settings.pinecone_api_key
+    index_name = settings.pinecone_index_name
+
+    logger.info("Pinecone API Key: %s", "PRESENT" if api_key else "MISSING")
+    logger.info("Pinecone Index: %s", index_name)
+
+    if not api_key:
+        return False, "PINECONE_API_KEY is missing. Set it in environment variables."
+    if not index_name:
+        return False, "PINECONE_INDEX_NAME is missing. Set it in environment variables."
+    if not re.match(r'^[a-z0-9][a-z0-9-]*[a-z0-9]$', index_name):
+        return False, (
+            f"Pinecone index name '{index_name}' is invalid. "
+            "Index names must contain only lowercase letters, digits, and hyphens, "
+            "and must start and end with a letter or digit."
+        )
+    return True, None
 
 
 def _get_pinecone_index() -> Any:
@@ -199,11 +227,16 @@ def _get_pinecone_index() -> Any:
     The Pinecone client and index handle are created once and reused for
     all subsequent queries.  This avoids the multi-second penalty of
     reconnecting on every request.
+
+    Raises RuntimeError with descriptive messages on auth/config failures.
     """
-    global _pinecone_index
+    global _pinecone_index, _pinecone_connection_error
     if _pinecone_index is not None:
         logger.info("[CACHE] Pinecone client reused")
         return _pinecone_index
+
+    if _pinecone_connection_error:
+        raise RuntimeError(_pinecone_connection_error)
 
     try:
         from pinecone import Pinecone, ServerlessSpec
@@ -213,50 +246,155 @@ def _get_pinecone_index() -> Any:
             "pip install pinecone"
         ) from exc
 
+    # Validate config before connecting
+    valid, error = _validate_pinecone_config()
+    if not valid:
+        _pinecone_connection_error = error
+        raise RuntimeError(error)
+
     settings = Settings()
-
-    pc = Pinecone(api_key=settings.pinecone_api_key)
-
+    api_key = settings.pinecone_api_key
     index_name = settings.pinecone_index_name
 
-    # Create the index if it does not already exist.
-    if index_name not in pc.list_indexes().names():
-        logger.info(
-            "Creating Pinecone index '%s' (dimension=%d, metric=cosine)",
-            index_name,
-            _EXPECTED_DIMENSION,
-        )
-        pc.create_index(
-            name=index_name,
-            dimension=_EXPECTED_DIMENSION,
-            metric="cosine",
-            spec=ServerlessSpec(cloud="aws", region="us-east-1"),
-        )
-
-    _pinecone_index = pc.Index(index_name)
-
-    # Validate dimension once at connection time.
     try:
-        stats = _pinecone_index.describe_index_stats()
-        index_dimension = stats.get("dimension", 0)
-        if index_dimension != _EXPECTED_DIMENSION:
-            raise RuntimeError(
-                f"Pinecone index '{index_name}' has dimension {index_dimension}, "
-                f"but the current embedding model '{_EXPECTED_MODEL}' produces "
-                f"{_EXPECTED_DIMENSION}-dim vectors. "
-                f"This index was created with a different embedding model. "
-                f"Recreate the index with dimension={_EXPECTED_DIMENSION} "
-                f"or set EMBEDDING_MODEL to match the existing index."
-            )
-    except Exception:
-        logger.warning("Could not validate Pinecone index dimension")
+        logger.info("Connecting to Pinecone (index=%s)...", index_name)
+        pc = Pinecone(api_key=api_key)
 
-    logger.info("Pinecone index ready: %s", index_name)
-    return _pinecone_index
+        existing_indexes = pc.list_indexes().names()
+        if index_name not in existing_indexes:
+            logger.info(
+                "Creating Pinecone index '%s' (dimension=%d, metric=cosine)",
+                index_name,
+                _EXPECTED_DIMENSION,
+            )
+            pc.create_index(
+                name=index_name,
+                dimension=_EXPECTED_DIMENSION,
+                metric="cosine",
+                spec=ServerlessSpec(cloud="aws", region="us-east-1"),
+            )
+
+        _pinecone_index = pc.Index(index_name)
+
+        # Validate dimension once at connection time.
+        try:
+            stats = _pinecone_index.describe_index_stats()
+            index_dimension = stats.get("dimension", 0)
+            vector_count = stats.get("total_vector_count", 0)
+            metric = stats.get("metric", "cosine")
+            if index_dimension != _EXPECTED_DIMENSION:
+                raise RuntimeError(
+                    f"Pinecone index '{index_name}' has dimension {index_dimension}, "
+                    f"but the current embedding model '{_EXPECTED_MODEL}' produces "
+                    f"{_EXPECTED_DIMENSION}-dim vectors. "
+                    f"This index was created with a different embedding model. "
+                    f"Recreate the index with dimension={_EXPECTED_DIMENSION} "
+                    f"or set EMBEDDING_MODEL to match the existing index."
+                )
+            logger.info(
+                "Pinecone index ready: %s (dimension=%d, metric=%s, vectors=%d)",
+                index_name, index_dimension, metric, vector_count,
+            )
+        except RuntimeError:
+            raise
+        except Exception as exc:
+            logger.warning("Could not validate Pinecone index dimension: %s", exc)
+
+        return _pinecone_index
+
+    except RuntimeError:
+        raise
+    except Exception as exc:
+        error_type = type(exc).__name__
+        user_message = str(exc).lower()
+
+        # Classify error and provide actionable message
+        if "unauthorized" in user_message or "401" in user_message or "invalid api key" in user_message:
+            error_msg = (
+                "Pinecone authentication failed. "
+                f"Verify PINECONE_API_KEY belongs to the project containing index '{index_name}'. "
+                "Check that the API key is correct and not expired."
+            )
+        elif "forbidden" in user_message or "403" in user_message:
+            error_msg = (
+                "Pinecone access denied. "
+                f"Verify PINECONE_API_KEY has permissions for index '{index_name}'."
+            )
+        elif "not found" in user_message or "404" in user_message:
+            error_msg = (
+                f"Pinecone index '{index_name}' not found. "
+                "Create it in the Pinecone console or enable auto-creation."
+            )
+        elif "timeout" in user_message or "timed out" in user_message:
+            error_msg = (
+                "Pinecone connection timed out. "
+                "Check network connectivity and try again."
+            )
+        elif "connection" in user_message or "network" in user_message:
+            error_msg = (
+                "Pinecone connection failed. "
+                "Check network connectivity and Pinecone service status."
+            )
+        else:
+            # Generic fallback — don't expose raw exception internals
+            error_msg = (
+                f"Pinecone connection failed for index '{index_name}'. "
+                f"Verify configuration and try again. ({error_type})"
+            )
+
+        logger.error("Pinecone error: %s", error_msg)
+        _pinecone_connection_error = error_msg
+        raise RuntimeError(error_msg) from exc
+
+
+def reset_pinecone_connection() -> None:
+    """Reset the Pinecone connection (useful for testing or recovery)."""
+    global _pinecone_index, _pinecone_connection_error
+    _pinecone_index = None
+    _pinecone_connection_error = None
+
+
+def get_pinecone_status() -> dict:
+    """Return Pinecone connection status without raising exceptions."""
+    settings = Settings()
+    api_key_present = bool(settings.pinecone_api_key)
+    index_name = settings.pinecone_index_name
+
+    valid, error = _validate_pinecone_config()
+    if not valid:
+        return {
+            "authenticated": False,
+            "api_key_present": api_key_present,
+            "index_name": index_name,
+            "index_exists": False,
+            "error": error,
+        }
+
+    try:
+        index = _get_pinecone_index()
+        stats = index.describe_index_stats()
+        return {
+            "authenticated": True,
+            "api_key_present": api_key_present,
+            "index_name": index_name,
+            "index_exists": True,
+            "dimension": stats.get("dimension", 0),
+            "metric": stats.get("metric", "cosine"),
+            "vector_count": stats.get("total_vector_count", 0),
+            "status": "ok",
+        }
+    except Exception as exc:
+        return {
+            "authenticated": False,
+            "api_key_present": api_key_present,
+            "index_name": index_name,
+            "index_exists": False,
+            "error": str(exc),
+        }
 
 
 # ---------------------------------------------------------------------------
-# Semantic search (Pinecone query)
+# Semantic search (Pinecone query) — production-safe error handling
 # ---------------------------------------------------------------------------
 
 def semantic_search(
@@ -265,26 +403,32 @@ def semantic_search(
 ) -> List[Dict[str, Any]]:
     """Embed *query* and search the Pinecone index for the top-k neighbours.
 
-    Args:
-        query: Free-text query string.
-        top_k: Number of results to return.
-
-    Returns:
-        A list of dicts with keys ``id``, ``text``, ``source``,
-        ``language``, ``score``.  ``score`` is the cosine similarity
-        reported by Pinecone.
+    Returns empty list with a warning log if Pinecone is unavailable.
+    Never raises uncaught exceptions.
     """
-    index = _get_pinecone_index()  # cached after first call
+    try:
+        index = _get_pinecone_index()  # cached after first call
+    except RuntimeError as exc:
+        logger.error("Semantic search unavailable: %s", exc)
+        return []
 
     # Embed the query (1 x 1536).
-    vectors = EmbeddingModel.embed(query)  # cached provider after first call
+    try:
+        vectors = EmbeddingModel.embed(query)  # cached provider after first call
+    except Exception as exc:
+        logger.error("Embedding failed for semantic search: %s", exc)
+        return []
 
     # Query Pinecone.
-    response = index.query(
-        vector=vectors[0].tolist(),
-        top_k=top_k,
-        include_metadata=True,
-    )
+    try:
+        response = index.query(
+            vector=vectors[0].tolist(),
+            top_k=top_k,
+            include_metadata=True,
+        )
+    except Exception as exc:
+        logger.error("Pinecone query failed: %s", exc)
+        return []
 
     results: List[Dict[str, Any]] = []
     for match in response.get("matches", []):
