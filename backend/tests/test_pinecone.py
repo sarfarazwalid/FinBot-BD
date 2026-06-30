@@ -178,7 +178,7 @@ class TestGetPineconeIndex:
         mock_pc.list_indexes.return_value.names.return_value = ["finbot-bd"]
         mock_index = MagicMock()
         mock_index.describe_index_stats.return_value = {
-            "dimension": 384,
+            "dimension": _EXPECTED_DIMENSION + 1,  # force mismatch
             "metric": "cosine",
             "total_vector_count": 100,
         }
