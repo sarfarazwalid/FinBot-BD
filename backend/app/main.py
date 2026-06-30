@@ -27,6 +27,10 @@ def _print_startup_report() -> None:
     print(f"OpenRouter Key Present:  {key_present}")
     print(f"Fallback Mode:           {fallback_mode}")
     print(f"")
+    print(f"CORS Origins:")
+    for origin in settings.backend_cors_origins:
+        print(f"- {origin}")
+    print(f"")
     print(f"Embedding Provider:      {settings.embedding_provider}")
     print(f"Embedding Model:         {settings.embedding_model} (remote API)")
     print(f"Embedding Dimension:     {settings.embedding_dimension}")
@@ -48,10 +52,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=settings.backend_cors_origins,
     allow_credentials=True,
-    allow_methods=["POST", "GET", "OPTIONS"],
-    allow_headers=["Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 app.include_router(chat_router, prefix=settings.api_prefix)
@@ -115,3 +120,14 @@ async def debug_huggingface():
 async def debug_pinecone():
     """Return Pinecone connection status."""
     return get_pinecone_status()
+
+
+@app.get("/debug/cors")
+async def debug_cors():
+    """Return CORS configuration."""
+    return {
+        "allowed_origins": settings.backend_cors_origins,
+        "allow_credentials": True,
+        "allow_methods": ["*"],
+        "allow_headers": ["*"],
+    }

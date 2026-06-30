@@ -17,6 +17,15 @@ class Settings(BaseSettings):
     # API
     api_prefix: str = "/api/v1"
 
+    # CORS
+    backend_cors_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "https://fin-bot-bd.vercel.app",
+        ]
+    )
+
     # LLM (OpenRouter)
     llm_provider: str = "openrouter"
     openrouter_api_key: str = ""
