@@ -57,6 +57,18 @@ app.add_middleware(
 app.include_router(chat_router, prefix=settings.api_prefix)
 
 
+@app.get("/")
+async def root():
+    return {
+        "service": APP_NAME + " API",
+        "status": "running",
+        "version": VERSION,
+        "docs": "/docs",
+        "openapi": "/openapi.json",
+        "health": "/health",
+    }
+
+
 @app.get("/health")
 async def health_check():
     settings = Settings()
